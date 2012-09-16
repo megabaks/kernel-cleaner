@@ -13,6 +13,6 @@ Features:
 <ul>
 <li>Kernel name independent ( hello, eclean-kernel :3 ).</li>
 <li>Correct work with EXTRAVERSION.</li>
-<li>Can ignore custom files and directories.</li>
-<li>Can force remove custom files and directories.</li>
+<li>Ignore custom files and directories.</li>
+<li>Force remove custom files and directories.</li>
 </ul>
