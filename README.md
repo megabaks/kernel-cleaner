@@ -11,13 +11,9 @@ nel's sources.
 as kernels in /boot.
 
 Features:
-
-1.Kernel name 
-independent ( hello, eclean-kernel :3 ).
-2.Correct work
-with EXTRAVERSION.
-3.Can ignore 
-custom files and directories.
-4.Can force 
-remove custom files and directories.
-
+<li>
+1.Kernel name independent ( hello, eclean-kernel :3 ).
+2.Correct work with EXTRAVERSION.
+3.Can ignore custom files and directories.
+4.Can force remove custom files and directories.
+</li>
