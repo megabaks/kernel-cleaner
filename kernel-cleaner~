@@ -139,7 +139,7 @@ available OPTIONS:
 --help/-help/-h/-?:  This help.
 
 CUSTOM can be one of:
---ignore [TARGETS]:  Don't remove TARGETS.( or pass TARGETS in the /etc/kernel-cleaner.conf )
+--ignore [TARGETS]:  Don't remove TARGETS.
 --force  [TARGETS]:  Forcing remove TARGETS.
 
 TARGETS can be one of:
