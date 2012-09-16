@@ -1,0 +1,105 @@
+#!/bin/bash
+
+SRC="/usr/src/linux"
+KERNELS="$(file /boot/* | grep "Linux.*version")"
+
+# config
+. /home/megabaks/kernel-cleaner/kernel-cleaner.conf
+
+#colors
+green="\033[01;32m"
+red="\033[01;31m"
+restore="\033[00m"
+
+############################################################################
+####### kernel path and real name ##########################################
+kernel_version() {
+makefile="${SRC}-${1}/Makefile"
+  if [ -f "${makefile}" ];then
+	VERSION="$(awk '/^VERSION =/ {print $3}' "${makefile}")"
+	PATCHLEVEL="$(awk '/^PATCHLEVEL =/ {print $3}' "${makefile}")"
+	SUBLEVEL="$(awk '/^SUBLEVEL =/ {print $3}' "${makefile}")"
+	EXTRAVERSION="$(awk '/^EXTRAVERSION =/ {print $3}' "${makefile}")"
+	FULL_KERNEL="${VERSION}.${PATCHLEVEL}.${SUBLEVEL}${EXTRAVERSION}"
+  fi
+}
+
+true_kernel() {
+  if [ -n "${1}" ];then
+	KERNEL="${1##*linux-}"
+	KERNEL="${KERNEL%/}"
+  fi
+
+  if [ -d "${SRC}-${KERNEL}" ];then
+	kernel_version ${KERNEL}
+  else
+	for kernel in `ls -d --color=never /usr/src/linux-*`;do
+	  kernel="${kernel##*/linux-}"
+	  kernel_version ${kernel}
+	  if [ "${KERNEL}" == "${FULL_KERNEL}" ];then
+		KERNEL="${kernel}"
+		break
+	  fi
+	done
+  fi
+}
+############################################################################
+
+while read line;do
+  FILE="`awk '{print $1}' <<< "${line}"`"
+  FILE="${FILE%:}"
+  version="`awk '{print $9}' <<< "${line}"`"
+  true_kernel ${version}
+
+  if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ];then
+	REMOVE_FILES+="${FILE}\n"
+  fi
+
+done <<< "${KERNELS}"
+
+VERSIONS="$(awk '{print $9}' <<< "${KERNELS}")"
+for mod_dir in `ls -1 --color=never /lib/modules/ | grep -v "${VERSIONS}"`;do
+  REMOVE_MOD_DIRS+="/lib/modules/${mod_dir}\n"
+done
+
+for src_dir in `ls -d1 --color=never ${SRC}*`;do
+  [ -f "${src_dir}/Makefile" ] || REMOVE_DIRS+="${src_dir}\n"
+done
+
+############################################################################
+################ ignore ####################################################
+IGNORE+=" $(sed -e "s|.*--ignore||" -e "s|--.*||" <<< ${*})"
+
+for ignor in ${IGNORE};do
+  if [ -f "${ignor}" ] || [ -d "${ignor}" ] ;then
+	echo -e "${green}ignoring:${restore}\t${ignor}"
+	REMOVE_FILES="${REMOVE_FILES//"${ignor}"/}"
+	REMOVE_DIRS="${REMOVE_DIRS//"${ignor}"/}"
+	REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS//"${ignor}"/}"
+  else
+	echo -e "${red}not found:${restore}\t${ignor}"
+  fi
+done
+############################################################################
+
+############################################################################
+################ force #####################################################
+FORCE+=" $(sed -e "s|.*--force||" -e "s|--.*||" <<< ${*})"
+
+for force in ${FORCE};do
+  if [ -f "${force}" ] || [ -d "${force}" ] ;then
+	echo -e "${green}forcing:${restore}\t${force}"
+	REMOVE_FILES+="${force}\n"
+	REMOVE_DIRS+="${force}\n"
+  else
+	echo -e "${red}not found:${restore}\t${force}"
+  fi
+done
+############################################################################
+
+echo -e "\n${green}Будут удалены следующие файлы:${restore}"
+echo -e "${REMOVE_FILES}" | sort -u | sed '/^$/d'
+
+echo -e "\n${green}Будут удалены следующие диры:${restore}"
+echo -e "${REMOVE_DIRS}" | sort -u | sed '/^$/d'
+echo -e "${REMOVE_MOD_DIRS}" | sort -u | sed '/^$/d'
