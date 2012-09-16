@@ -1,2 +1,12 @@
 kernel-cleaner
 ==============
+
+Designed for:
+1. Find and remove kernels without availables source_and_modules directories .
+2. Find and remove directories in /usr/src/, which haven't kernel's sources.
+3. Find and remove directories in /lib/modules, which haven't parents as kernels in /boot.
+Features:
+Kernel name independent ( hello, eclean-kernel :3 ).
+Correct work with EXTRAVERSION.
+Can ignore custom files and directories.
+Can force remove custom files and directories.
