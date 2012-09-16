@@ -12,8 +12,8 @@ as kernels in /boot.
 
 Features:
 <li>
-1.Kernel name independent ( hello, eclean-kernel :3 ).
-2.Correct work with EXTRAVERSION.
-3.Can ignore custom files and directories.
-4.Can force remove custom files and directories.
+<*>Kernel name independent ( hello, eclean-kernel :3 ).
+<*>Correct work with EXTRAVERSION.
+<*>Can ignore custom files and directories.
+<*>Can force remove custom files and directories.
 </li>
