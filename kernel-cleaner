@@ -6,12 +6,21 @@
 ################ init ######################################################
 init(){
 SRC="/usr/src/linux"
-KERNELS="$(file /boot/* | grep "Linux.*version")"
-# config
+
+KERNELS="$(file /boot/* | awk '/Linux.*version/ {print $1,$9}')"
+KERNELS="${KERNELS//:/}"
+
+INITRAMS="$(file /boot/* | awk '/compressed data/ {print $1,$2}')"
+INITRAMS="${INITRAMS//:/}"
+
+CONFIGS="$(grep 'Linux/' `file /boot/* | awk '/ASCII/ {print $1}' | sed 's|:||'` | awk '{print $1,$3}')"
+CONFIGS="${CONFIGS//:#/}"
+
+#### config ####
 [ -z "${CONFIG}" ] && CONFIG="/etc/kernel-cleaner.conf"
 [ -f "${CONFIG}" ] && . "${CONFIG}"
 
-# colors
+#### colors ####
 green="\033[01;32m"
 red="\033[01;31m"
 restore="\033[00m"
@@ -38,7 +47,7 @@ true_kernel() {
   if [ -d "${SRC}-${KERNEL}" ];then
 	kernel_version ${KERNEL}
   else
-	for kernel in `ls -d --color=never /usr/src/linux-*`;do
+	for kernel in `ls -d --color=never "${SRC}"-*`;do
 	  kernel="${kernel##*/linux-}"
 	  kernel_version ${kernel}
 	  if [ "${KERNEL}" == "${FULL_KERNEL}" ];then
@@ -51,22 +60,70 @@ true_kernel() {
 ############################################################################
 ################ boot ######################################################
 check_boot(){
-while read line;do
-  FILE="`awk '{print $1}' <<< "${line}"`"
-  FILE="${FILE%:}"
-  version="`awk '{print $9}' <<< "${line}"`"
+while read file version;do
   true_kernel ${version}
-
   if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ];then
-	REMOVE_FILES+="${FILE}\n"
+	REMOVE_FILES+="${file}\n"
+#### initrams ####
+	while read ram_file ram_ver;do
+	  if [ "${FULL_KERNEL}" == "${ram_ver}" ];then
+		REMOVE_FILES+="${ram_file}\n"
+	  fi
+	done <<< "${INITRAMS_FULL}"
+#### configs ####
+	while read conf_file conf_version;do
+	  if [ "${FULL_KERNEL}" == "${conf_version}" ];then
+		REMOVE_FILES+="${conf_file}\n"
+	  fi
+	done <<< "${CONFIGS}"
   fi
-
 done <<< "${KERNELS}"
+}
+############################################################################
+################ initrams ##################################################
+initrams(){
+  while read initram compressor;do
+	if [ -n "${compressor}" ];then
+	  [ "${compressor}" == "gzip" ]  && decompressor="zcat"
+	  [ "${compressor}" == "bzip2" ] && decompressor="bzcat"
+	  [ "${compressor}" == "lzop" ]  && decompressor="lzop -c"
+	  [ "${compressor}" == "XZ" ]    && decompressor="xzcat"
+	  [ "${compressor}" == "LZMA" ]  && decompressor="lzcat"
+	  initram_ver="$( "${decompressor}" "${initram}" | strings | awk '/^vermagic=[[:digit:]]/ {print $1}' | sort -u | sed 's|vermagic=||')"
+	  INITRAMS_FULL+="${initram} ${initram_ver}\n"
+	fi
+  done <<< "${INITRAMS}"
+}
+initrams_orphans(){
+  ORPHANS="${INITRAMS_FULL}"
+  while read kernel_file kernel_ver;do
+	while read orphan_file orphan_ver;do
+	  if [ "${kernel_ver}" == "${orphan_ver}" ];then
+		ORPHANS="${ORPHANS//"${orphan_file} ${orphan_ver}"/}"
+	  fi
+	done <<< "${INITRAMS_FULL}"
+  done <<< "${KERNELS}"
+  ORPHANS="$( echo -e "${ORPHANS}" | awk '{print $1}' )"
+  REMOVE_FILES+="${ORPHANS}\n"
+}
+############################################################################
+################ configs ###################################################
+orphan_configs(){
+  CONFIGS_ORPHANS="${CONFIGS}"
+  while read kernel_file kernel_ver;do
+	while read config conf_ver;do
+	  if [ "${kernel_ver}" == "${conf_ver}" ];then
+		CONFIGS_ORPHANS="${CONFIGS_ORPHANS//"${config} ${conf_ver}"/}"
+	  fi
+	done <<< "${CONFIGS}"
+  done <<< "${KERNELS}"
+  CONFIGS_ORPHANS="$( echo -e "${CONFIGS_ORPHANS}" | awk '{print $1}' )"
+  REMOVE_FILES+="${CONFIGS_ORPHANS}\n"
 }
 ############################################################################
 ################ modules ###################################################
 check_mod(){
-VERSIONS="$(awk '{print $9}' <<< "${KERNELS}")"
+VERSIONS="$(awk '{print $2}' <<< "${KERNELS}")"
 for mod_dir in `ls -1 --color=never /lib/modules/ | grep -v "${VERSIONS}"`;do
   REMOVE_MOD_DIRS+="/lib/modules/${mod_dir}\n"
 done
@@ -86,9 +143,9 @@ IGNORE+=" $(sed -e "s|.*--ignore||" -e "s|--.*||" <<< ${*})"
 for ignor in ${IGNORE};do
   if [ -f "${ignor}" ] || [ -d "${ignor}" ] ;then
 	echo -e "${green}Ignoring:${restore}\t${ignor}"
-	REMOVE_FILES="${REMOVE_FILES//"${ignor}"/}"
-	REMOVE_DIRS="${REMOVE_DIRS//"${ignor}"/}"
-	REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS//"${ignor}"/}"
+	[ -f "${ignor}" ] && REMOVE_FILES="${REMOVE_FILES//"${ignor}"/}"
+	[ -d "${ignor}" ] && REMOVE_DIRS="${REMOVE_DIRS//"${ignor}"/}"
+	[ -d "${ignor}" ] && REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS//"${ignor}"/}"
   else
 	echo -e "${red}Not found:${restore}\t${ignor}"
   fi
@@ -102,8 +159,8 @@ FORCE+=" $(sed -e "s|.*--force||" -e "s|--.*||" <<< ${*})"
 for force in ${FORCE};do
   if [ -f "${force}" ] || [ -d "${force}" ] ;then
 	echo -e "${green}Forcing remove:${restore}\t${force}"
-	REMOVE_FILES+="${force}\n"
-	REMOVE_DIRS+="${force}\n"
+	[ -f "${force}" ] && REMOVE_FILES+="${force}\n"
+	[ -d "${force}" ] && REMOVE_DIRS+="${force}\n"
   else
 	echo -e "${red}Not found:${restore}\t${force}"
   fi
@@ -116,19 +173,27 @@ status(){
   REMOVE_DIRS="$(echo -e "${REMOVE_DIRS}" | sort -u | sed '/^$/d')"
   REMOVE_MOD_DIRS="$(echo -e "${REMOVE_MOD_DIRS}" | sort -u | sed '/^$/d')"
 
-  echo -e "\n${green}Next files will be removed:${restore}"
-  echo -e "${REMOVE_FILES}"
-
-  echo -e "\n${green}Next directories will be removed:${restore}"
-  echo -e "${REMOVE_DIRS}"
-  echo -e "${REMOVE_MOD_DIRS}"
+  if [ -n "${REMOVE_FILES}" ] || [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
+	if [ -n "${REMOVE_FILES}" ];then
+	  echo -e "\n${green}Next files will be removed:${restore}"
+	  echo -e "${REMOVE_FILES}"
+	fi
+  
+	if [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
+	  echo -e "\n${green}Next directories will be removed:${restore}"
+	  echo -e "${REMOVE_DIRS}"
+	  echo -e "${REMOVE_MOD_DIRS}"
+	fi
+  else
+	echo -e "\n${green}Who's here? o_O${restore}\n"
+  fi
 }
 ############################################################################
 ################ remove ####################################################
 remove(){
-  rm ${REMOVE_FILES//\\n/ }
-  rm -r ${REMOVE_DIRS//\\n/ }
-  rm -r ${REMOVE_MOD_DIRS//\\n/ }
+  [ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
+  [ -n "${REMOVE_DIRS}" ] && rm -rf ${REMOVE_DIRS//\\n/ }
+  [ -n "${REMOVE_MOD_DIRS}" ] && rm -rf ${REMOVE_MOD_DIRS//\\n/ }
 }
 ############################################################################
 ################ lets go! ##################################################
@@ -136,7 +201,7 @@ if [ "${1}" == "--help" ] || [ "${1}" == "-help" ] || [ "${1}" == "-h" ] || [ "$
   echo -e \
 "Usage: kernel-cleaner [OPTION] [CUSTOM] [TARGET] [TARGET]…
 available OPTIONS:
---run:               Check and remove broken kernels.
+--run:               Check and remove broken kernels/sources/modules/initrams/configs.
 --pretend:           Check only. Nothing remove.
 --help/-help/-h/-?:  This help.
 
@@ -153,22 +218,28 @@ fi
 
 if [ "${1}" == "--pretend" ];then
   init;
-  ignore "${*}";
-  force "${*}";
   check_boot;
+  initrams;
+  initrams_orphans;
+  orphan_configs;
   check_mod;
   check_src;
+  ignore "${*}";
+  force "${*}";
   status;
   exit 0
 fi
 
 if [ "${1}" == "--run" ];then
   init;
-  ignore "${*}";
-  force "${*}";
   check_boot;
+  initrams;
+  initrams_orphans;
+  orphan_configs;
   check_mod;
   check_src;
+  ignore "${*}";
+  force "${*}";
   status;
   remove;
   exit 0
