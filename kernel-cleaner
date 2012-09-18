@@ -268,16 +268,19 @@ remove(){
 ############################################################################
 ################ list ######################################################
 list(){
-  [ -n "${KERNELS}" ] && echo -e "\n${green}Kernels:${restore}\n`awk '{print $1}' <<< "${KERNELS}"`"
-  [ -n "${INITRAMS}" ] && echo -e "\n${green}Initrams:${restore}\n`awk '{print $1}' <<< "${INITRAMS}"`"
-  [ -n "${CONFIGS}" ] && echo -e "\n${green}Configs:${restore}\n`awk '{print $1}' <<< "${CONFIGS}"`"
-  [ -n "${ALL_MAPS}" ] && echo -e "\n${green}Maps:${restore}\n`awk '{print $1}' <<< "${ALL_MAPS}"`"
-  ls -d1 /lib/modules/* &>/dev/null && echo -e "\n${green}Modules:${restore}\n`ls -d1 --color=never /lib/modules/*`"
+echo -e "$(
+  initrams;
+  [ -n "${KERNELS}" ] && echo -e "${green}Kernels:${restore}\n `awk '{print $1,$2}' <<< "${KERNELS}"`"
+  [ -n "${INITRAMS}" ] && echo -e "${green}Initrams:${restore}\n `awk '{print $1,$2}' <<< "${INITRAMS_FULL}"`"
+  [ -n "${CONFIGS}" ] && echo -e "${green}Configs:${restore}\n `awk '{print $1,$2}' <<< "${CONFIGS}"`"
+  [ -n "${ALL_MAPS}" ] && echo -e "${green}Maps:${restore}\n `awk '{print $1}' <<< "${ALL_MAPS}"`"
+  ls -d1 /lib/modules/* &>/dev/null && echo -e "\n${green}Modules:${restore}\n `ls -d1 --color=never /lib/modules/*`"
 
   if `ls -d1 ${SRC}-* &>/dev/null`;then
 	while read dir;do
 	  if [ -f "${dir}/Makefile" ];then
-		SOURCES+="${dir}\n"
+		true_kernel "${dir}"
+		SOURCES+="${dir} ${FULL_KERNEL}\n"
 	  else
 		BROKEN_SOURCES+="${dir}\n"
 	  fi
@@ -286,6 +289,7 @@ list(){
 	[ -n "${BROKEN_SOURCES}" ] && echo -e "\n${green}Broken sources:${restore}\n${BROKEN_SOURCES%\\n}"
   fi
   echo
+)" | column -t
 }
 ############################################################################
 ################ lets go! ##################################################
