@@ -104,7 +104,8 @@ while read file version;do
 
 	  #### maps #######
 	  while read map_file;do
-		map_version="${map_file#*map-}"
+		trash="${map_file%%${FULL_KERNEL}}"
+		map_version="${map_file##${trash}}"
 		if [ "${FULL_KERNEL}" == "${map_version}" ];then
 		  REMOVE_FILES+="${map_file}\n"
 		fi
