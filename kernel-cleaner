@@ -2,13 +2,16 @@
 # Copyright megabaks
 # Distributed under the terms of the GNU General Public License v3 or later
 
-####### ignore workaround
+####### ignore/force workaround
 IGNORE="${IGNORE} "
 #### config ####
 [ -z "${CONFIG}" ] && CONFIG="/etc/kernel-cleaner.conf"
 [ -f "${CONFIG}" ] && . "${CONFIG}"
 export FULL_IGNORE="$IGNORE"
-
+echo "${*}" | grep -q "\--force-deps\>" && FORCED_DEPS="1"
+FULL_IGNORE+=" $(sed -e "s|.*--ignore ||" -e "s|--.*||" <<< "${*}")"
+FULL_IGNORE="$(echo ${FULL_IGNORE} | tr " " "\n" | uniq | tr "\n" " ")"
+FORCE+=" $(sed -e "s|.*--force ||" -e "s|--.*||" <<< "${*}")"
 ############################################################################
 ################ init ######################################################
 init(){
@@ -70,14 +73,19 @@ true_kernel() {
 check_boot(){
 while read file version;do
   true_kernel ${version}
-  unset STOP
+  unset STOP FORCED
+
+  #### ignore ####
   for ignored in ${FULL_IGNORE};do
 	if [ "${ignored}" == "${file}" ];then
 	  STOP="1"
 	fi
   done
+
+  force_deps
+
   if [ -z "${STOP}" ];then
-	if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ];then
+	if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ] || [ -n "${FORCED}" ];then
 	  REMOVE_FILES+="${file}\n"
 
 	  #### initrams ####
@@ -190,8 +198,6 @@ done
 ############################################################################
 ################ ignore ####################################################
 ignore(){
-FULL_IGNORE+=" $(sed -e "s|.*--ignore||" -e "s|--.*||" <<< "${*}")"
-
 for ignor in ${FULL_IGNORE};do
   if [ -f "${ignor}" ] || [ -d "${ignor}" ] ;then
 	echo -e "${green}Ignoring:${restore}\t${ignor}"
@@ -206,8 +212,6 @@ done
 ############################################################################
 ################ force #####################################################
 force(){
-FORCE+=" $(sed -e "s|.*--force||" -e "s|--.*||" <<< ${*})"
-
 for force in ${FORCE};do
   if [ -f "${force}" ] || [ -d "${force}" ] ;then
 	echo -e "${green}Forcing remove:${restore}\t${force}"
@@ -217,6 +221,18 @@ for force in ${FORCE};do
 	echo -e "${red}Not found:${restore}\t${force}"
   fi
 done
+}
+############################################################################
+################ force-deps ################################################
+force_deps(){
+  if [ -n "${FORCED_DEPS}" ];then
+	for forced in ${FORCE};do
+	  if [ "${forced}" == "${file}" ];then
+		unset STOP
+		FORCED="1"
+	  fi
+	done
+  fi
 }
 ############################################################################
 ################ status ####################################################
@@ -229,12 +245,14 @@ status(){
 	if [ -n "${REMOVE_FILES}" ];then
 	  echo -e "\n${green}Next files will be removed:${restore}"
 	  echo -e "${REMOVE_FILES}"
+	  echo
 	fi
   
 	if [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
 	  echo -e "\n${green}Next directories will be removed:${restore}"
 	  echo -e "${REMOVE_DIRS}"
 	  echo -e "${REMOVE_MOD_DIRS}"
+	  echo
 	fi
   else
 	echo -e "\n${green}Who's here? o_O${restore}\n"
@@ -283,6 +301,9 @@ available OPTIONS:
 CUSTOM can be one of:
 --ignore [TARGETS]:  Don't remove TARGETS.( or pass TARGETS in the /etc/kernel-cleaner.conf )
 --force  [TARGETS]:  Forcing remove TARGETS.
+--force-deps:        Forcing remove initramfs/config/map for forced TARGET kernel.
+
+--force override --ignore.
 
 TARGETS can be one of:
 [FILE]:    example '/boot/vmlinuz-X.Y.Z'
@@ -291,13 +312,13 @@ TARGETS must be SPACE devided."
   exit 0
 fi
 
-if [ "${1}" == "--list" ];then
+if echo "${*}" | grep -q "\--list\>";then
   init;
   list;
   exit 0
 fi
 
-if [ "${1}" == "--pretend" ];then
+if echo "${*}" | grep -q "\--pretend\>";then
   init;
   check_boot;
   initrams;
@@ -312,7 +333,7 @@ if [ "${1}" == "--pretend" ];then
   exit 0
 fi
 
-if [ "${1}" == "--run" ];then
+if echo "${*}" | grep -q "\--run\>";then
   init;
   check_boot;
   initrams;
