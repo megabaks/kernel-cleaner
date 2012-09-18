@@ -164,10 +164,21 @@ orphan_maps(){
 ############################################################################
 ################ modules ###################################################
 check_mod(){
-VERSIONS="$(awk '{print $2}' <<< "${KERNELS}")"
-for mod_dir in `ls -1 --color=never /lib/modules/ | grep -v "${VERSIONS}"`;do
-  REMOVE_MOD_DIRS+="/lib/modules/${mod_dir}\n"
-done
+  VERSIONS="$( echo -e "${KERNELS}" | awk '{print $2}' | uniq )"
+  MOD_DIRS="$(ls -1 --color=never /lib/modules/)"
+  TRASH_DIR="${MOD_DIRS}"
+  while read mod_dir;do
+	while read ver;do
+	  [ "${mod_dir}" == "${ver}" ] && GOOD_MOD+="${mod_dir} "
+	done <<< "${VERSIONS}"
+  done <<< "${MOD_DIRS}"
+  for moddir in ${GOOD_MOD};do
+	MOD_DIRS="${MOD_DIRS/"${moddir}"/}"
+  done
+  while read md;do
+	MOD_DIRS="${MOD_DIRS/${md}//lib/modules/${md}}"
+  done <<< "${MOD_DIRS}"
+  REMOVE_MOD_DIRS+="${MOD_DIRS}\n"
 }
 ############################################################################
 ################ sources ###################################################
@@ -233,8 +244,8 @@ status(){
 ################ remove ####################################################
 remove(){
   [ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
-  [ -n "${REMOVE_DIRS}" ] && rm -rf ${REMOVE_DIRS//\\n/ }
-  [ -n "${REMOVE_MOD_DIRS}" ] && rm -rf ${REMOVE_MOD_DIRS//\\n/ }
+  [ -n "${REMOVE_DIRS}" ] && rm -r ${REMOVE_DIRS//\\n/ }
+  [ -n "${REMOVE_MOD_DIRS}" ] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
 }
 ############################################################################
 ################ list ######################################################
