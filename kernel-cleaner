@@ -2,6 +2,13 @@
 # Copyright megabaks
 # Distributed under the terms of the GNU General Public License v3 or later
 
+####### ignore workaround
+IGNORE="${IGNORE} "
+#### config ####
+[ -z "${CONFIG}" ] && CONFIG="/etc/kernel-cleaner.conf"
+[ -f "${CONFIG}" ] && . "${CONFIG}"
+export FULL_IGNORE="$IGNORE"
+
 ############################################################################
 ################ init ######################################################
 init(){
@@ -19,9 +26,7 @@ CONFIGS="${CONFIGS//:#/}"
 file /boot/System* &>/dev/null && MAPS="1"
 [ -n "${MAPS}" ] && ALL_MAPS="$(ls -1 --color=never /boot/System.map-*)"
 
-#### config ####
-[ -z "${CONFIG}" ] && CONFIG="/etc/kernel-cleaner.conf"
-[ -f "${CONFIG}" ] && . "${CONFIG}"
+
 
 #### colors ####
 green="\033[01;32m"
@@ -65,27 +70,38 @@ true_kernel() {
 check_boot(){
 while read file version;do
   true_kernel ${version}
-  if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ];then
-	REMOVE_FILES+="${file}\n"
-#### initrams ####
-	while read ram_file ram_ver;do
-	  if [ "${FULL_KERNEL}" == "${ram_ver}" ];then
-		REMOVE_FILES+="${ram_file}\n"
-	  fi
-	done <<< "${INITRAMS_FULL}"
-#### configs ####
-	while read conf_file conf_version;do
-	  if [ "${FULL_KERNEL}" == "${conf_version}" ];then
-		REMOVE_FILES+="${conf_file}\n"
-	  fi
-	done <<< "${CONFIGS}"
-#### maps #######
-	while read map_file;do
-	  map_version="${map_file#*map-}"
-	  if [ "${FULL_KERNEL}" == "${map_version}" ];then
-		REMOVE_FILES+="${map_file}\n"
-	  fi
-	done <<< "${ALL_MAPS}"
+  unset STOP
+  for ignored in ${FULL_IGNORE};do
+	if [ "${ignored}" == "${file}" ];then
+	  STOP="1"
+	fi
+  done
+  if [ -z "${STOP}" ];then
+	if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ];then
+	  REMOVE_FILES+="${file}\n"
+
+	  #### initrams ####
+	  while read ram_file ram_ver;do
+		if [ "${FULL_KERNEL}" == "${ram_ver}" ];then
+		  REMOVE_FILES+="${ram_file}\n"
+		fi
+	  done <<< "${INITRAMS_FULL}"
+
+	  #### configs ####
+	  while read conf_file conf_version;do
+		if [ "${FULL_KERNEL}" == "${conf_version}" ];then
+		  REMOVE_FILES+="${conf_file}\n"
+		fi
+	  done <<< "${CONFIGS}"
+
+	  #### maps #######
+	  while read map_file;do
+		map_version="${map_file#*map-}"
+		if [ "${FULL_KERNEL}" == "${map_version}" ];then
+		  REMOVE_FILES+="${map_file}\n"
+		fi
+	  done <<< "${ALL_MAPS}"
+	fi
   fi
 done <<< "${KERNELS}"
 }
@@ -163,9 +179,9 @@ done
 ############################################################################
 ################ ignore ####################################################
 ignore(){
-IGNORE+=" $(sed -e "s|.*--ignore||" -e "s|--.*||" <<< ${*})"
+FULL_IGNORE+=" $(sed -e "s|.*--ignore||" -e "s|--.*||" <<< "${*}")"
 
-for ignor in ${IGNORE};do
+for ignor in ${FULL_IGNORE};do
   if [ -f "${ignor}" ] || [ -d "${ignor}" ] ;then
 	echo -e "${green}Ignoring:${restore}\t${ignor}"
 	[ -f "${ignor}" ] && REMOVE_FILES="${REMOVE_FILES//"${ignor}"/}"
