@@ -265,6 +265,7 @@ if [ "${1}" == "--run" ];then
   initrams;
   initrams_orphans;
   orphan_configs;
+  orphan_maps;
   check_mod;
   check_src;
   ignore "${*}";
