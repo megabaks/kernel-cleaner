@@ -140,6 +140,7 @@ orphan_maps(){
   while read m_file x;do
 	while read k_file k_ver;do
 	  m_ver="${m_file##*map-}"
+	  echo -e ${k_ver}  ${m_ver}
 	  if [ "${k_ver}" == "${m_ver}" ];then
 		MAPS_ORPHANS="${MAPS_ORPHANS//"${m_file} x"/}"
 	  fi
@@ -250,7 +251,7 @@ if [ "${1}" == "--pretend" ];then
   initrams;
   initrams_orphans;
   orphan_configs;
-  orphan_maps;
+#  orphan_maps;
   check_mod;
   check_src;
   ignore "${*}";
@@ -265,7 +266,7 @@ if [ "${1}" == "--run" ];then
   initrams;
   initrams_orphans;
   orphan_configs;
-  orphan_maps;
+#  orphan_maps;
   check_mod;
   check_src;
   ignore "${*}";
