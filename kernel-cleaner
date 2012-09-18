@@ -80,12 +80,12 @@ while read file version;do
 	  fi
 	done <<< "${CONFIGS}"
 #### maps #######
-	while read map_file x;do
-	  map_version="${map_file##*map-}"
+	while read map_file;do
+	  map_version="${map_file#*map-}"
 	  if [ "${FULL_KERNEL}" == "${map_version}" ];then
 		REMOVE_FILES+="${map_file}\n"
 	  fi
-	done <<< "${MAPS}"
+	done <<< "${ALL_MAPS}"
   fi
 done <<< "${KERNELS}"
 }
