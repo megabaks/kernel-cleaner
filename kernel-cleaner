@@ -221,14 +221,36 @@ remove(){
   [ -n "${REMOVE_MOD_DIRS}" ] && rm -rf ${REMOVE_MOD_DIRS//\\n/ }
 }
 ############################################################################
+################ list ######################################################
+list(){
+  [ -n "${KERNELS}" ] && echo -e "\n${green}Kernels:${restore}\n`awk '{print $1}' <<< "${KERNELS}"`"
+  [ -n "${INITRAMS}" ] && echo -e "\n${green}Initrams:${restore}\n`awk '{print $1}' <<< "${INITRAMS}"`"
+  [ -n "${CONFIGS}" ] && echo -e "\n${green}Configs:${restore}\n`awk '{print $1}' <<< "${CONFIGS}"`"
+  [ -n "${ALL_MAPS}" ] && echo -e "\n${green}Maps:${restore}\n`awk '{print $1}' <<< "${ALL_MAPS}"`"
+  ls -d1 /lib/modules/* &>/dev/null && echo -e "\n${green}Modules:${restore}\n`ls -d1 --color=never /lib/modules/*`"
+
+  if `ls -d1 ${SRC}-* &>/dev/null`;then
+	while read dir;do
+	  if [ -f "${dir}/Makefile" ];then
+		SOURCES+="${dir}\n"
+	  else
+		BROKEN_SOURCES+="${dir}\n"
+	  fi
+	done <<< "$(ls -d1 --color=never ${SRC}-*)"
+	[ -n "${SOURCES}" ] && echo -e "\n${green}Sources:${restore}\n${SOURCES%\\n}"
+	[ -n "${BROKEN_SOURCES}" ] && echo -e "\n${green}Broken sources:${restore}\n${BROKEN_SOURCES}"
+  fi
+}
+############################################################################
 ################ lets go! ##################################################
-if [ "${1}" == "--help" ] || [ "${1}" == "-help" ] || [ "${1}" == "-h" ] || [ "${1}" == "-?" ];then
+if [ "${1}" == "--help" ] || [ "${1}" == "" ];then
   echo -e \
 "Usage: kernel-cleaner [OPTION] [CUSTOM] [TARGET] [TARGET]…
 available OPTIONS:
---run:               Check and remove broken kernels/sources/modules/initrams/configs.
---pretend:           Check only. Nothing remove.
---help/-help/-h/-?:  This help.
+--run:      Check and remove broken kernels/sources/modules/initrams/configs/maps.
+--list:     List of a founded kernels/sources/modules/initrams/configs/maps.
+--pretend:  Check only. Nothing remove.
+--help:     This help.
 
 CUSTOM can be one of:
 --ignore [TARGETS]:  Don't remove TARGETS.( or pass TARGETS in the /etc/kernel-cleaner.conf )
@@ -238,6 +260,12 @@ TARGETS can be one of:
 [FILE]:    example '/boot/vmlinuz-X.Y.Z'
 [PATH]:    example '/usr/src/linux-3.5.6-pf/'
 TARGETS must be SPACE devided."
+  exit 0
+fi
+
+if [ "${1}" == "--list" ];then
+  init;
+  list;
   exit 0
 fi
 
