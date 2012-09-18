@@ -301,7 +301,7 @@ available OPTIONS:
 CUSTOM can be one of:
 --ignore [TARGETS]:  Don't remove TARGETS.( or pass TARGETS in the /etc/kernel-cleaner.conf )
 --force  [TARGETS]:  Forcing remove TARGETS.
---force-deps:        Forcing remove initramfs/config/map for forced TARGET kernel.
+--force-deps:        Forcing remove initramfs/config/map for forced/auto TARGET kernel.
 
 --force override --ignore.
 
