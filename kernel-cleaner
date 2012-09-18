@@ -124,7 +124,8 @@ initrams(){
 	  [ "${compressor}" == "XZ" ]    && decompressor="xzcat"
 	  [ "${compressor}" == "LZMA" ]  && decompressor="lzcat"
 	  initram_ver="$( "${decompressor}" "${initram}" | strings | awk '/^vermagic=[[:digit:]]/ {print $1}' | sort -u | sed 's|vermagic=||')"
-	  INITRAMS_FULL+="${initram} ${initram_ver}\n"
+	  INITRAMS_FULL="${INITRAMS_FULL}
+	  ${initram} ${initram_ver}"
 	fi
   done <<< "${INITRAMS}"
 }
