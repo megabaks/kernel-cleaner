@@ -238,8 +238,9 @@ list(){
 	  fi
 	done <<< "$(ls -d1 --color=never ${SRC}-*)"
 	[ -n "${SOURCES}" ] && echo -e "\n${green}Sources:${restore}\n${SOURCES%\\n}"
-	[ -n "${BROKEN_SOURCES}" ] && echo -e "\n${green}Broken sources:${restore}\n${BROKEN_SOURCES}"
+	[ -n "${BROKEN_SOURCES}" ] && echo -e "\n${green}Broken sources:${restore}\n${BROKEN_SOURCES%\\n}"
   fi
+  echo
 }
 ############################################################################
 ################ lets go! ##################################################
