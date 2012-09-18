@@ -8,16 +8,16 @@ init(){
 
 SRC="/usr/src/linux"
 
-KERNELS="$(file /boot/* | awk '/Linux.*version/ {print $1,$9}')"
-KERNELS="${KERNELS//:/}"
+KERNELS="$(file -F ' ' /boot/* | awk '/Linux.*version/ {print $1,$9}')"
 
-INITRAMS="$(file /boot/* | awk '/compressed data/ {print $1,$2}')"
-INITRAMS="${INITRAMS//:/}"
+INITRAMS="$(file -F ' ' /boot/* | awk '/compressed data/ {print $1,$2}')"
 
-CONFIGS="$(grep 'Linux/' `file /boot/* | awk '/ASCII/ {print $1}' | sed 's|:||'` | awk '{print $1,$3}')"
+file /boot/* | grep -q 'ASCII' && TEXT="1"
+[ -n "${TEXT}" ] && CONFIGS="$(grep 'Linux/' `file /boot/* | awk '/ASCII/ {print $1}' | sed 's|:||'` | awk '{print $1,$3}')"
 CONFIGS="${CONFIGS//:#/}"
 
-ALL_MAPS="$(ls -1 --color=never /boot/System.map-*)"
+file /boot/System* &>/dev/null && MAPS="1"
+[ -n "${MAPS}" ] && ALL_MAPS="$(ls -1 --color=never /boot/System.map-*)"
 
 #### config ####
 [ -z "${CONFIG}" ] && CONFIG="/etc/kernel-cleaner.conf"
