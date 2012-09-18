@@ -133,7 +133,7 @@ initrams_orphans(){
   while read kernel_file kernel_ver;do
 	while read orphan_file orphan_ver;do
 	  if [ "${kernel_ver}" == "${orphan_ver}" ];then
-		ORPHANS="${ORPHANS//"${orphan_file} ${orphan_ver}"/}"
+		ORPHANS="${ORPHANS/"${orphan_file} ${orphan_ver}"/}"
 	  fi
 	done <<< "${INITRAMS_FULL}"
   done <<< "${KERNELS}"
