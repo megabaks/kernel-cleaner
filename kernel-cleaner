@@ -86,19 +86,22 @@ while read file version;do
 
   if [ -z "${STOP}" ];then
 	if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ] || [ -n "${FORCED}" ];then
-	  REMOVE_FILES+="${file}\n"
+	  REMOVE_FILES="${REMOVE_FILES}
+	  ${file}"
 
 	  #### initrams ####
 	  while read ram_file ram_ver;do
 		if [ "${FULL_KERNEL}" == "${ram_ver}" ];then
-		  REMOVE_FILES+="${ram_file}\n"
+		  REMOVE_FILES="${REMOVE_FILES}
+		  ${ram_file}"
 		fi
 	  done <<< "${INITRAMS_FULL}"
 
 	  #### configs ####
 	  while read conf_file conf_version;do
 		if [ "${FULL_KERNEL}" == "${conf_version}" ];then
-		  REMOVE_FILES+="${conf_file}\n"
+		  REMOVE_FILES="${REMOVE_FILES}
+		  ${conf_file}"
 		fi
 	  done <<< "${CONFIGS}"
 
@@ -107,7 +110,8 @@ while read file version;do
 		trash="${map_file%%${FULL_KERNEL}}"
 		map_version="${map_file##${trash}}"
 		if [ "${FULL_KERNEL}" == "${map_version}" ];then
-		  REMOVE_FILES+="${map_file}\n"
+		  REMOVE_FILES="${REMOVE_FILES}
+		  ${map_file}"
 		fi
 	  done <<< "${ALL_MAPS}"
 	fi
@@ -140,7 +144,8 @@ initrams_orphans(){
 	done <<< "${INITRAMS_FULL}"
   done <<< "${KERNELS}"
   ORPHANS="$( echo -e "${ORPHANS}" | awk '{print $1}' )"
-  REMOVE_FILES+="${ORPHANS}\n"
+  REMOVE_FILES="${REMOVE_FILES}
+  ${ORPHANS}"
 }
 ############################################################################
 ################ configs ###################################################
@@ -154,7 +159,8 @@ orphan_configs(){
 	done <<< "${KERNELS}"
   done <<< "${CONFIGS}"
   CONFIGS_ORPHANS="$( awk '{print $1}' <<< "${CONFIGS_ORPHANS}" )"
-  REMOVE_FILES+="${CONFIGS_ORPHANS}\n"
+  REMOVE_FILES="${REMOVE_FILES}
+  ${CONFIGS_ORPHANS}"
 }
 ############################################################################
 ################ System.map ################################################
@@ -169,7 +175,8 @@ orphan_maps(){
 	done <<< "${KERNELS}"
   done <<< "${ALL_MAPS}"
   MAPS_ORPHANS="$( awk '{print $1}' <<< "${MAPS_ORPHANS}" )"
-  REMOVE_FILES+="${MAPS_ORPHANS}\n"
+  REMOVE_FILES="${REMOVE_FILES}
+  ${MAPS_ORPHANS}"
 }
 ############################################################################
 ################ modules ###################################################
@@ -188,13 +195,15 @@ check_mod(){
   while read md;do
 	MOD_DIRS="${MOD_DIRS/${md}//lib/modules/${md}}"
   done <<< "${MOD_DIRS}"
-  REMOVE_MOD_DIRS+="${MOD_DIRS}\n"
+  REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
+  ${MOD_DIRS}"
 }
 ############################################################################
 ################ sources ###################################################
 check_src(){
 for src_dir in `ls -d1 --color=never ${SRC}*`;do
-  [ -f "${src_dir}/Makefile" ] || REMOVE_DIRS+="${src_dir}\n"
+  [ -f "${src_dir}/Makefile" ] || REMOVE_DIRS="${REMOVE_DIRS}
+  ${src_dir}"
 done
 }
 ############################################################################
@@ -217,8 +226,10 @@ force(){
 for force in ${FORCE};do
   if [ -f "${force}" ] || [ -d "${force}" ] ;then
 	echo -e "${green}Forcing remove:${restore}\t${force}"
-	[ -f "${force}" ] && REMOVE_FILES+="${force}\n"
-	[ -d "${force}" ] && REMOVE_DIRS+="${force}\n"
+	[ -f "${force}" ] && REMOVE_FILES="${REMOVE_FILES}
+	${force}"
+	[ -d "${force}" ] && REMOVE_DIRS="${REMOVE_DIRS}
+	${force}"
   else
 	echo -e "${red}Not found:${restore}\t${force}"
   fi
