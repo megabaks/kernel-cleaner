@@ -114,6 +114,12 @@ ${conf_file}"
 ${map_file}"
 		fi
 	  done <<< "${ALL_MAPS}"
+	  
+	  #### modules ####
+	  if [ -d "/lib/modules/${version}" ];then
+		REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
+/lib/modules/${version}"
+	  fi
 	fi
   fi
 done <<< "${KERNELS}"
@@ -130,7 +136,7 @@ initrams(){
 	  [ "${compressor}" == "LZMA" ]  && decompressor="lzcat"
 	  initram_ver="$( "${decompressor}" "${initram}" | strings | awk '/^vermagic=[[:digit:]]/ {print $1}' | sort -u | sed 's|vermagic=||')"
 	  INITRAMS_FULL="${INITRAMS_FULL}
-	  ${initram} ${initram_ver}"
+${initram} ${initram_ver}"
 	fi
   done <<< "${INITRAMS}"
 }
@@ -167,7 +173,8 @@ ${CONFIGS_ORPHANS}"
 orphan_maps(){
   MAPS_ORPHANS="${ALL_MAPS}"
   while read m_file;do
-	m_ver="${m_file#*map-}"
+	trash="${m_file%%${FULL_KERNEL}}"
+	m_ver="${m_file##${trash}}"
 	while read k_file k_ver;do
 	  if [ "${k_ver}" == "${m_ver}" ];then
 		MAPS_ORPHANS="${MAPS_ORPHANS/"${m_file}"/}"
@@ -193,16 +200,17 @@ check_mod(){
 	MOD_DIRS="${MOD_DIRS/"${moddir}"/}"
   done
   while read md;do
-	MOD_DIRS="${MOD_DIRS/${md}//lib/modules/${md}}"
+	[ -n "${md}" ] && TRASH_MOD_DIRS="${TRASH_MOD_DIRS}
+/lib/modules/${md}"
   done <<< "${MOD_DIRS}"
-  REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS%\\n}
-${MOD_DIRS}"
+  REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
+${TRASH_MOD_DIRS}"
 }
 ############################################################################
 ################ sources ###################################################
 check_src(){
 for src_dir in `ls -d1 --color=never ${SRC}*`;do
-  [ -f "${src_dir}/Makefile" ] || REMOVE_DIRS="${REMOVE_DIRS%\\n}
+  [ -f "${src_dir}/Makefile" ] || REMOVE_DIRS="${REMOVE_DIRS}
 ${src_dir}"
 done
 }
@@ -228,7 +236,7 @@ for force in ${FORCE};do
 	echo -e "${green}Forcing remove:${restore}\t${force}"
 	[ -f "${force}" ] && REMOVE_FILES="${REMOVE_FILES}
 ${force}"
-	[ -d "${force}" ] && REMOVE_DIRS="${REMOVE_DIRS%\\n}
+	[ -d "${force}" ] && REMOVE_DIRS="${REMOVE_DIRS}
 ${force}"
   else
 	echo -e "${red}Not found:${restore}\t${force}"
@@ -251,14 +259,8 @@ force_deps(){
 ################ status ####################################################
 status(){
   REMOVE_FILES="$(echo -e "${REMOVE_FILES}" | sort -u | sed '/^$/d')"
-  REMOVE_FILES="${REMOVE_FILES#\\n}"
-  REMOVE_FILES="${REMOVE_FILES%\\n}"
   REMOVE_DIRS="$(echo -e "${REMOVE_DIRS}" | sort -u | sed '/^$/d')"
-  REMOVE_DIRS="${REMOVE_DIRS#\\n}"
-  REMOVE_DIRS="${REMOVE_DIRS%\\n}"
   REMOVE_MOD_DIRS="$(echo -e "${REMOVE_MOD_DIRS}" | sort -u | sed '/^$/d')"
-  REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS#\\n}"
-  REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS%\\n}"
 
   if [ -n "${REMOVE_FILES}" ] || [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
 	if [ -n "${REMOVE_FILES}" ];then
@@ -305,7 +307,7 @@ echo -e "$(
 	  fi
 	done <<< "$(ls -d1 --color=never ${SRC}-*)"
 	[ -n "${SOURCES}" ] && echo -e "\n${green}Sources:${restore}\n${SOURCES%\\n}"
-	[ -n "${BROKEN_SOURCES}" ] && echo -e "\n${green}Broken sources:${restore}\n${BROKEN_SOURCES%\\n}"
+	[ -n "${BROKEN_SOURCES}" ] && echo -e "\n${green}Broken_sources:${restore}\n${BROKEN_SOURCES%\\n}"
   fi
   echo
 )" | column -t
