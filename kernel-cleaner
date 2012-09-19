@@ -103,85 +103,54 @@ if [ -n "${FULL_IGNORE/ /}" ];then
 		IGNORED+=" /lib/modules/${version}"
 	  fi
 	else
-	  force_deps
-	  if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ] || [ -n "${FORCED}" ];then
-		REMOVE_FILES="${REMOVE_FILES}
-${file}"
-
-		#### initrams ####
-		while read ram_file ram_ver;do
-		  if [ "${version}" == "${ram_ver}" ];then
-			REMOVE_FILES="${REMOVE_FILES}
-${ram_file}"
-		  fi
-		done <<< "${INITRAMS_FULL}"
-
-		#### configs ####
-		while read conf_file conf_version;do
-		  if [ "${version}" == "${conf_version}" ];then
-			REMOVE_FILES="${REMOVE_FILES}
-${conf_file}"
-		  fi
-		done <<< "${CONFIGS}"
-
-		#### maps #######
-		while read map_file;do
-		  trash="${map_file%%${version}}"
-		  map_version="${map_file##${trash}}"
-		  if [ "${version}" == "${map_version}" ];then
-			REMOVE_FILES="${REMOVE_FILES}
-${map_file}"
-		  fi
-		done <<< "${ALL_MAPS}"
-	  
-		#### modules ####
-		if [ -d "/lib/modules/${version}" ];then
-		  REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
-/lib/modules/${version}"
-		fi
-	  fi
+	  real_check;
 	fi
   done
 else
-	  force_deps
-	  if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ] || [ -n "${FORCED}" ];then
-		REMOVE_FILES="${REMOVE_FILES}
-${file}"
-
-		#### initrams ####
-		while read ram_file ram_ver;do
-		  if [ "${version}" == "${ram_ver}" ];then
-			REMOVE_FILES="${REMOVE_FILES}
-${ram_file}"
-		  fi
-		done <<< "${INITRAMS_FULL}"
-
-		#### configs ####
-		while read conf_file conf_version;do
-		  if [ "${version}" == "${conf_version}" ];then
-			REMOVE_FILES="${REMOVE_FILES}
-${conf_file}"
-		  fi
-		done <<< "${CONFIGS}"
-
-		#### maps #######
-		while read map_file;do
-		  trash="${map_file%%${version}}"
-		  map_version="${map_file##${trash}}"
-		  if [ "${version}" == "${map_version}" ];then
-			REMOVE_FILES="${REMOVE_FILES}
-${map_file}"
-		  fi
-		done <<< "${ALL_MAPS}"
-	  
-		#### modules ####
-		if [ -d "/lib/modules/${version}" ];then
-		  REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
-/lib/modules/${version}"
-		fi
-	  fi
+  real_check;
 fi
 done <<< "${KERNELS}"
+}
+############################################################################
+################ real_check ################################################
+real_check(){
+force_deps
+if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ] || [ -n "${FORCED}" ];then
+  REMOVE_FILES="${REMOVE_FILES}
+${file}"
+
+  #### initrams ####
+  while read ram_file ram_ver;do
+	if [ "${version}" == "${ram_ver}" ];then
+	  REMOVE_FILES="${REMOVE_FILES}
+${ram_file}"
+	fi
+  done <<< "${INITRAMS_FULL}"
+
+  #### configs ####
+  while read conf_file conf_version;do
+	if [ "${version}" == "${conf_version}" ];then
+	  REMOVE_FILES="${REMOVE_FILES}
+${conf_file}"
+	fi
+  done <<< "${CONFIGS}"
+
+  #### maps #######
+  while read map_file;do
+	trash="${map_file%%${version}}"
+	map_version="${map_file##${trash}}"
+	if [ "${version}" == "${map_version}" ];then
+	  REMOVE_FILES="${REMOVE_FILES}
+${map_file}"
+	fi
+  done <<< "${ALL_MAPS}"
+	  
+  #### modules ####
+  if [ -d "/lib/modules/${version}" ];then
+	REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
+/lib/modules/${version}"
+  fi
+fi
 }
 ############################################################################
 ################ initrams ##################################################
