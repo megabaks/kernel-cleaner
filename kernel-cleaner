@@ -2,7 +2,6 @@
 # Copyright megabaks
 # Distributed under the terms of the GNU General Public License v3 or later
 
-. /etc/init.d/functions.sh
 ####### ignore/force workaround
 IGNORE="${IGNORE} "
 #### config ####
@@ -111,7 +110,7 @@ ${file}"
 
 		#### initrams ####
 		while read ram_file ram_ver;do
-		  if [ "${FULL_KERNEL}" == "${ram_ver}" ];then
+		  if [ "${version}" == "${ram_ver}" ];then
 			REMOVE_FILES="${REMOVE_FILES}
 ${ram_file}"
 		  fi
@@ -119,7 +118,7 @@ ${ram_file}"
 
 		#### configs ####
 		while read conf_file conf_version;do
-		  if [ "${FULL_KERNEL}" == "${conf_version}" ];then
+		  if [ "${version}" == "${conf_version}" ];then
 			REMOVE_FILES="${REMOVE_FILES}
 ${conf_file}"
 		  fi
@@ -127,9 +126,9 @@ ${conf_file}"
 
 		#### maps #######
 		while read map_file;do
-		  trash="${map_file%%${FULL_KERNEL}}"
+		  trash="${map_file%%${version}}"
 		  map_version="${map_file##${trash}}"
-		  if [ "${FULL_KERNEL}" == "${map_version}" ];then
+		  if [ "${version}" == "${map_version}" ];then
 			REMOVE_FILES="${REMOVE_FILES}
 ${map_file}"
 		  fi
@@ -151,7 +150,7 @@ ${file}"
 
 		#### initrams ####
 		while read ram_file ram_ver;do
-		  if [ "${FULL_KERNEL}" == "${ram_ver}" ];then
+		  if [ "${version}" == "${ram_ver}" ];then
 			REMOVE_FILES="${REMOVE_FILES}
 ${ram_file}"
 		  fi
@@ -159,7 +158,7 @@ ${ram_file}"
 
 		#### configs ####
 		while read conf_file conf_version;do
-		  if [ "${FULL_KERNEL}" == "${conf_version}" ];then
+		  if [ "${version}" == "${conf_version}" ];then
 			REMOVE_FILES="${REMOVE_FILES}
 ${conf_file}"
 		  fi
@@ -167,9 +166,9 @@ ${conf_file}"
 
 		#### maps #######
 		while read map_file;do
-		  trash="${map_file%%${FULL_KERNEL}}"
+		  trash="${map_file%%${version}}"
 		  map_version="${map_file##${trash}}"
-		  if [ "${FULL_KERNEL}" == "${map_version}" ];then
+		  if [ "${version}" == "${map_version}" ];then
 			REMOVE_FILES="${REMOVE_FILES}
 ${map_file}"
 		  fi
@@ -234,11 +233,10 @@ orphan_maps(){
   MAPS_ORPHANS="${ALL_MAPS}"
   while read m_file;do
 	while read k_file k_ver;do
-	  true_kernel "${k_ver}"
-	  trash="${m_file%%${FULL_KERNEL}}"
+	  trash="${m_file%%${k_ver}}"
 	  m_ver="${m_file##${trash}}"
 	  if [ "${k_ver}" == "${m_ver}" ];then
-		MAPS_ORPHANS="${MAPS_ORPHANS/"${m_file}"/}"
+		MAPS_ORPHANS="${MAPS_ORPHANS/"${m_file}"*/}"
 	  fi
 	done <<< "${KERNELS}"
   done <<< "${ALL_MAPS}"
@@ -346,7 +344,7 @@ remove(){
   [ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
   [ -n "${REMOVE_DIRS}" ] && rm -r ${REMOVE_DIRS//\\n/ }
   [ -n "${REMOVE_MOD_DIRS}" ] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
-  echo -e "${green}Removing...${restore}" && eend $?
+  echo -e "${green}Removing...${restore}"
 }
 ############################################################################
 ################ list ######################################################
