@@ -7,7 +7,7 @@ IGNORE="${IGNORE} "
 #### config ####
 [ -z "${CONFIG}" ] && CONFIG="/etc/kernel-cleaner.conf"
 [ -f "${CONFIG}" ] && . "${CONFIG}"
-export FULL_IGNORE="$IGNORE"
+FULL_IGNORE="$IGNORE"
 echo "${*}" | grep -q "\--force-deps\>" && FORCED_DEPS="1"
 FULL_IGNORE+=" $(sed -e "s|.*--ignore ||" -e "s|--.*||" <<< "${*}")"
 FULL_IGNORE="$(echo ${FULL_IGNORE} | tr " " "\n" | uniq | tr "\n" " ")"
@@ -22,14 +22,11 @@ KERNELS="$(file -F ' ' /boot/* | awk '/Linux.*version/ {print $1,$9}')"
 
 INITRAMS="$(file -F ' ' /boot/* | awk '/compressed data/ {print $1,$2}')"
 
-file /boot/* | grep -q 'ASCII' && TEXT="1"
-[ -n "${TEXT}" ] && CONFIGS="$(grep 'Linux/' `file /boot/* | awk '/ASCII/ {print $1}' | sed 's|:||'` | awk '{print $1,$3}')"
+file /boot/* | grep -q 'ASCII' && \
+CONFIGS="$(grep 'Linux/' `file -F ' ' /boot/* | awk '/ASCII/ {print $1}'` | awk '{print $1,$3}')"
 CONFIGS="${CONFIGS//:#/}"
 
-file /boot/System* &>/dev/null && MAPS="1"
-[ -n "${MAPS}" ] && ALL_MAPS="$(ls -1 --color=never /boot/System.map-*)"
-
-
+ALL_MAPS="$(ls -1 --color=never /boot/System.map-* 2>/dev/null)"
 
 #### colors ####
 green="\033[01;32m"
@@ -78,15 +75,37 @@ while read file version;do
   #### ignore ####
   for ignored in ${FULL_IGNORE};do
 	if [ "${ignored}" == "${file}" ];then
-	  STOP="1"
-	fi
-  done
+	  #### initrams ####
+	  while read ram_file ram_ver;do
+		if [ "${version}" == "${ram_ver}" ];then
+		  IGNORED+=" ${ram_file}"
+		fi
+	  done <<< "${INITRAMS_FULL}"
 
-  force_deps
+	  #### configs ####
+	  while read conf_file conf_version;do
+		if [ "${version}" == "${conf_version}" ];then
+		  IGNORED+=" ${conf_file}"
+		fi
+	  done <<< "${CONFIGS}"
 
-  if [ -z "${STOP}" ];then
-	if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ] || [ -n "${FORCED}" ];then
-	  REMOVE_FILES="${REMOVE_FILES}
+	  #### maps #######
+	  while read imap_file;do
+		itrash="${imap_file%%${version}}"
+		imap_version="${imap_file##${itrash}}"
+		if [ "${version}" == "${imap_version}" ];then
+		  IGNORED+=" ${imap_file}"
+		fi
+	  done <<< "${ALL_MAPS}"
+	  
+	  #### modules ####
+	  if [ -d "/lib/modules/${version}" ];then
+		IGNORED+=" /lib/modules/${version}"
+	  fi
+	else
+	  force_deps
+	  if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ] || [ -n "${FORCED}" ];then
+		REMOVE_FILES="${REMOVE_FILES}
 ${file}"
 
 	  #### initrams ####
@@ -122,6 +141,7 @@ ${map_file}"
 	  fi
 	fi
   fi
+  done
 done <<< "${KERNELS}"
 }
 ############################################################################
@@ -218,12 +238,12 @@ done
 ############################################################################
 ################ ignore ####################################################
 ignore(){
-for ignor in ${FULL_IGNORE};do
+for ignor in ${FULL_IGNORE} $IGNORED;do
   if [ -f "${ignor}" ] || [ -d "${ignor}" ] ;then
 	echo -e "${green}Ignoring:${restore}\t${ignor}"
-	[ -f "${ignor}" ] && REMOVE_FILES="${REMOVE_FILES//"${ignor}"/}"
-	[ -d "${ignor}" ] && REMOVE_DIRS="${REMOVE_DIRS//"${ignor}"/}"
-	[ -d "${ignor}" ] && REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS//"${ignor}"/}"
+	[ -f "${ignor}" ] && REMOVE_FILES="${REMOVE_FILES/"${ignor}"/}"
+	[ -d "${ignor}" ] && REMOVE_DIRS="${REMOVE_DIRS/"${ignor}"/}"
+	[ -d "${ignor}" ] && REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${ignor}"/}"
   else
 	echo -e "${red}Not found:${restore}\t${ignor}"
   fi
@@ -346,8 +366,8 @@ fi
 
 if echo "${*}" | grep -q "\--pretend\>";then
   init;
-  check_boot;
   initrams;
+  check_boot;
   initrams_orphans;
   orphan_configs;
   orphan_maps;
@@ -361,8 +381,8 @@ fi
 
 if echo "${*}" | grep -q "\--run\>";then
   init;
-  check_boot;
   initrams;
+  check_boot;
   initrams_orphans;
   orphan_configs;
   orphan_maps;
