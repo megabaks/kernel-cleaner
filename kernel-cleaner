@@ -107,8 +107,9 @@ ${conf_file}"
 
 	  #### maps #######
 	  while read map_file;do
-		trash="${map_file%%${FULL_KERNEL}}"
-		map_version="${map_file##${trash}}"
+		mfile="${map_file%.old}"
+		trash="${mfile%%${FULL_KERNEL}}"
+		map_version="${mfile##${trash}}"
 		if [ "${FULL_KERNEL}" == "${map_version}" ];then
 		  REMOVE_FILES="${REMOVE_FILES}
 ${map_file}"
@@ -173,11 +174,12 @@ ${CONFIGS_ORPHANS}"
 orphan_maps(){
   MAPS_ORPHANS="${ALL_MAPS}"
   while read m_file;do
-	trash="${m_file%%${FULL_KERNEL}}"
-	m_ver="${m_file##${trash}}"
 	while read k_file k_ver;do
+	  file="${m_file%.old}"
+	  mtrash="${file%%${k_ver}}"
+	  m_ver="${file##${mtrash}}"
 	  if [ "${k_ver}" == "${m_ver}" ];then
-		MAPS_ORPHANS="${MAPS_ORPHANS/"${m_file}"/}"
+		MAPS_ORPHANS="${MAPS_ORPHANS/"${m_file}"\n/}"
 	  fi
 	done <<< "${KERNELS}"
   done <<< "${ALL_MAPS}"
@@ -333,7 +335,7 @@ CUSTOM can be one of:
 TARGETS can be one of:
 [FILE]:    example '/boot/vmlinuz-X.Y.Z'
 [PATH]:    example '/usr/src/linux-3.5.6-pf/'
-TARGETS must be SPACE devided."
+TARGETS must be separated by SPACE."
   exit 0
 fi
 
