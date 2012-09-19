@@ -174,7 +174,8 @@ orphan_maps(){
   MAPS_ORPHANS="${ALL_MAPS}"
   while read m_file;do
 	while read k_file k_ver;do
-	  trash="${m_file%%${k_ver}}"
+	  true_kernel "${k_ver}"
+	  trash="${m_file%%${FULL_KERNEL}}"
 	  m_ver="${m_file##${trash}}"
 	  if [ "${k_ver}" == "${m_ver}" ];then
 		MAPS_ORPHANS="${MAPS_ORPHANS/"${m_file}"/}"
