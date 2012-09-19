@@ -173,9 +173,9 @@ ${CONFIGS_ORPHANS}"
 orphan_maps(){
   MAPS_ORPHANS="${ALL_MAPS}"
   while read m_file;do
-	trash="${m_file%%${FULL_KERNEL}}"
-	m_ver="${m_file##${trash}}"
 	while read k_file k_ver;do
+	  trash="${m_file%%${k_ver}}"
+	  m_ver="${m_file##${trash}}"
 	  if [ "${k_ver}" == "${m_ver}" ];then
 		MAPS_ORPHANS="${MAPS_ORPHANS/"${m_file}"/}"
 	  fi
