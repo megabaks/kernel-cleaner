@@ -305,6 +305,7 @@ status(){
 	fi
   else
 	echo -e "\n${green}Who's here? o_O${restore}\n"
+	OK="1"
   fi
 }
 ############################################################################
@@ -313,7 +314,7 @@ remove(){
   [ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
   [ -n "${REMOVE_DIRS}" ] && rm -r ${REMOVE_DIRS//\\n/ }
   [ -n "${REMOVE_MOD_DIRS}" ] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
-  echo -e "${green}Removing...${restore}"
+  [ -z "${OK}" ] && echo -e "${green}Removing...${restore}"
 }
 ############################################################################
 ################ list ######################################################
