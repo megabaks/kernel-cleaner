@@ -346,7 +346,7 @@ remove(){
   [ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
   [ -n "${REMOVE_DIRS}" ] && rm -r ${REMOVE_DIRS//\\n/ }
   [ -n "${REMOVE_MOD_DIRS}" ] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
-  echo -e "Removing..." && eend $?
+  echo -e "${green}Removing...${restore}" && eend $?
 }
 ############################################################################
 ################ list ######################################################
