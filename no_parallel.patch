@@ -10,16 +10,16 @@
  SRC="/usr/src/linux"
  
  echo "Kernels....";
--KERNELS="$(parallel -j${threads} "file -F ' '" ::: /boot/* | awk '/Linux.*version/ {print $1,$9}')" && eend 0
-+KERNELS="$(file -F ' ' /boot/* | awk '/Linux.*version/ {print $1,$9}')" && eend 0
+-KERNELS="$(parallel -j${threads} "file -F ' '" ::: /boot/* | awk '/Linux.*version/ {print $1,$9}')" ; eend 0
++KERNELS="$(file -F ' ' /boot/* | awk '/Linux.*version/ {print $1,$9}')" ; eend 0
  echo "Initrams...";
--INITRAMS="$(parallel -j${threads} "file -F ' '" ::: /boot/* | awk '/compressed data/ {print $1,$2}')" && eend 0
-+INITRAMS="$(file -F ' ' /boot/* | awk '/compressed data/ {print $1,$2}')" && eend 0
+-INITRAMS="$(parallel -j${threads} "file -F ' '" ::: /boot/* | awk '/compressed data/ {print $1,$2}')" ; eend 0
++INITRAMS="$(file -F ' ' /boot/* | awk '/compressed data/ {print $1,$2}')" ; eend 0
  echo "Configs....";
 -parallel -j${threads} "file -F ' '" ::: /boot/* | grep -q 'ASCII' || \
 -parallel -j${threads} "file -F ' '" ::: /boot/* | grep -q 'config build file' && \
 +file -F ' ' /boot/* | grep -q 'ASCII' || \
 +file -F ' ' /boot/* | grep -q 'config build file' && \
  CONFIGS="$(grep -H 'Linux/' /boot/* 2>/dev/null | awk '{print $1,$3}')"
- CONFIGS="${CONFIGS//:#/}" && eend 0
+ CONFIGS="${CONFIGS//:#/}" ; eend 0
  echo "Maps.......";
