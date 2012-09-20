@@ -1,0 +1,24 @@
+--- kernel-cleaner/kernel-cleaner	2012-09-20 03:47:23.000000000 +0000
++++ /usr/sbin/kernel-cleaner	2012-09-20 03:45:01.000000000 +0000
+@@ -18,15 +18,15 @@
+ 
+ SRC="/usr/src/linux"
+ 
+-KERNELS="$(parallel -j3 "file -F ' '" ::: /boot/* | awk '/Linux.*version/ {print $1,$9}')"
++KERNELS="$(file -F ' ' /boot/* | awk '/Linux.*version/ {print $1,$9}')"
+ 
+-INITRAMS="$(parallel -j3 "file -F ' '" ::: /boot/* | awk '/compressed data/ {print $1,$2}')"
++INITRAMS="$(file -F ' ' /boot/* | awk '/compressed data/ {print $1,$2}')"
+ 
+-parallel -j3 "file -F ' '" ::: /boot/* | grep -q 'ASCII' && \
+-CONFIGS="$(grep 'Linux/' `parallel -j3 "file -F ' '" ::: /boot/* | awk '/ASCII/ {print $1}'` | awk '{print $1,$3}')"
+-parallel -j3 "file -F ' '" ::: /boot/* | grep -q 'config build file' && \
++file /boot/* | grep -q 'ASCII' && \
++CONFIGS="$(grep 'Linux/' `file -F ' ' /boot/* | awk '/ASCII/ {print $1}'` | awk '{print $1,$3}')"
++file /boot/* | grep -q 'config build file' && \
+ CONFIGS="${CONFIGS}
+-$(grep 'Linux/' `parallel -j3 "file -F ' '" ::: /boot/* | awk '/config build file/ {print $1}'` | awk '{print $1,$3}')"
++$(grep 'Linux/' `file -F ' ' /boot/* | awk '/config build file/ {print $1}'` | awk '{print $1,$3}')"
+ CONFIGS="${CONFIGS//:#/}"
+ 
+ ALL_MAPS="$(ls -1 --color=never /boot/System.map-* 2>/dev/null)"
