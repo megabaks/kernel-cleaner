@@ -32,6 +32,7 @@ ALL_MAPS="$(ls -1 --color=never /boot/System.map-* 2>/dev/null)"
 green="\033[01;32m"
 red="\033[01;31m"
 restore="\033[00m"
+contrast="\033[0;0;1;37m"
 }
 ############################################################################
 ################ kernel path and real name #################################
@@ -311,10 +312,25 @@ status(){
 ############################################################################
 ################ remove ####################################################
 remove(){
-  [ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
-  [ -n "${REMOVE_DIRS}" ] && rm -r ${REMOVE_DIRS//\\n/ }
-  [ -n "${REMOVE_MOD_DIRS}" ] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
-  [ -z "${OK}" ] && echo -e "${green}Removing...${restore}"
+  if [ -n "${REMOVE_FILES}" ] || [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
+	echo -ne "${contrast}Would you like to remove this trash?${restore} [${green}Yes${restore}/${red}No${restore}] ";
+	while read x;do
+	  if [ "${x}" == "Yes" ] || [ "${x}" == "yes" ] || [ "${x}" == "Y" ] || [ "${x}" == "y" ] || [ "${x}" == "" ];then
+		[ -z "${OK}" ] && echo -e "${green}Removing...${restore}"
+		[ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
+		[ -n "${REMOVE_DIRS}" ] && rm -r ${REMOVE_DIRS//\\n/ }
+		[ -n "${REMOVE_MOD_DIRS}" ] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
+		exit 0
+	  else
+		if [ "${x}" == "No" ] || [ "${x}" == "no" ] || [ "${x}" == "n" ];then
+		  exit 0
+		else
+		  echo -ne "Sorry, response '${x}' not understood. [${green}Yes${restore}/${red}No${restore}] "
+		  continue
+		fi
+	  fi
+	done
+  fi
 }
 ############################################################################
 ################ list ######################################################
