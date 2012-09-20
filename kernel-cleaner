@@ -369,8 +369,8 @@ echo -e "$(
 )" | column -t
 }
 ############################################################################
-################ lets go! ##################################################
-if [ "${1}" == "--help" ] || [ "${1}" == "" ] || [ "${1}" == "-h" ] || [ "${1}" == "-?" ];then
+################ help ######################################################
+help_kc(){
   echo -e \
 "Usage: kernel-cleaner [OPTION] [CUSTOM] [TARGET] [TARGET]…
 available OPTIONS:
@@ -384,22 +384,23 @@ CUSTOM can be one of:
 --force  [TARGETS]:  Forcing remove TARGETS.
 --force-deps:        Forcing remove initramfs/config/map for forced/auto TARGET kernel.
 
---force override --ignore.
-
 TARGETS can be one of:
 [FILE]:    example '/boot/vmlinuz-X.Y.Z'
 [PATH]:    example '/usr/src/linux-3.5.6-pf/'
 TARGETS must be separated by SPACE."
-  exit 0
-fi
+}
+############################################################################
+################ lets go! ##################################################
 
-if echo "${*}" | grep -q "\--list\>";then
+case ${1} in
+
+--list )
   init;
   list;
   exit 0
-fi
+  ;;
 
-if echo "${*}" | grep -q "\--pretend\>";then
+--pretend )
   init;
   initrams;
   check_boot;
@@ -412,9 +413,9 @@ if echo "${*}" | grep -q "\--pretend\>";then
   force "${*}";
   status;
   exit 0
-fi
+  ;;
 
-if echo "${*}" | grep -q "\--run\>";then
+--run )
   init;
   initrams;
   check_boot;
@@ -428,4 +429,26 @@ if echo "${*}" | grep -q "\--run\>";then
   status;
   remove;
   exit 0
-fi
+  ;;
+
+--help )
+  help_kc;
+  exit 0
+  ;;
+
+-h )
+  help_kc;
+  exit 0
+  ;;
+
+-? )
+  help_kc;
+  exit 0
+  ;;
+
+* )
+  help_kc;
+  exit 0
+  ;;
+
+esac
