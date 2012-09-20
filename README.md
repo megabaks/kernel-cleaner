@@ -1,4 +1,4 @@
-kernel-cleaner alpha!!1
+kernel-cleaner
 ==============
 
 Designed for:
