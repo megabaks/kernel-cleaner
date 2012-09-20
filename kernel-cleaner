@@ -24,6 +24,7 @@ INITRAMS="$(file -F ' ' /boot/* | awk '/compressed data/ {print $1,$2}')"
 
 file /boot/* | grep -q 'ASCII' && \
 CONFIGS="$(grep 'Linux/' `file -F ' ' /boot/* | awk '/ASCII/ {print $1}'` | awk '{print $1,$3}')"
+file /boot/* | grep -q 'config build file' && \
 CONFIGS="${CONFIGS}
 $(grep 'Linux/' `file -F ' ' /boot/* | awk '/config build file/ {print $1}'` | awk '{print $1,$3}')"
 CONFIGS="${CONFIGS//:#/}"
