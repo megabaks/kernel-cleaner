@@ -323,13 +323,17 @@ status(){
 ################ remove ####################################################
 remove(){
   if [ -n "${REMOVE_FILES}" ] || [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
+	total_space="$(du -shc ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } | tail -n1 | awk '{print $1}')"
+	total_files="$(find ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } -type f | wc -l )"
 	echo -ne "${contrast}Would you like to remove this trash?${restore} [${green}Yes${restore}/${red}No${restore}] ";
 	while read x;do
 	  if [ "${x}" == "Yes" ] || [ "${x}" == "yes" ] || [ "${x}" == "Y" ] || [ "${x}" == "y" ] || [ "${x}" == "" ];then
-		echo -e "${green}Removing...${restore}"
+		echo -e "\n${green}Removing...${restore}"
 		[ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
 		[ -n "${REMOVE_DIRS}" ] && rm -r ${REMOVE_DIRS//\\n/ }
 		[ -n "${REMOVE_MOD_DIRS}" ] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
+		eend 0 2>/dev/null
+		echo -e "\n[ ${green}${total_space}${restore} ] Total space from ${green}${total_files}${restore} files were freed.\n"
 		exit 0
 	  else
 		if [ "${x}" == "No" ] || [ "${x}" == "no" ] || [ "${x}" == "n" ];then
