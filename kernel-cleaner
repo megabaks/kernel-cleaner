@@ -22,9 +22,9 @@ IGNORE="${IGNORE} "
 [ -f "${CONFIG}" ] && . "${CONFIG}"
 FULL_IGNORE="$IGNORE"
 echo "${*}" | grep -q "\--force-deps\>" && FORCED_DEPS="1"
-FULL_IGNORE+=" $(sed -e "s|.*--ignore ||" -e "s|--.*||" <<< "${*}")"
+FULL_IGNORE+=" $(sed -e "s|.*--ignore ||" -e "s| --.*||" -e "s| -.*||"<<< `echo "${*}" | grep '\--ignore' `)"
 FULL_IGNORE="$(echo ${FULL_IGNORE} | tr " " "\n" | uniq | tr "\n" " ")"
-FORCE+=" $(sed -e "s|.*--force ||" -e "s|--.*||" <<< "${*}")"
+FORCE+=" $(sed -e "s|.*--force ||" -e "s| --.*||" -e "s| -.*||" <<< `echo "${*}" | grep '\--force' `)"
 ############################################################################
 ################ init ######################################################
 init(){
@@ -374,10 +374,10 @@ help_kc(){
   echo -e \
 "Usage: kernel-cleaner [OPTION] [CUSTOM] [TARGET] [TARGET]…
 available OPTIONS:
---run:      Check and remove broken kernels/sources/modules/initrams/configs/maps.
---list:     List of a founded kernels/sources/modules/initrams/configs/maps.
---pretend:  Check only. Nothing remove.
---help:     This help.
+--run/-r/r:      Check and remove broken kernels/sources/modules/initrams/configs/maps.
+--list/-l/l:     List of a founded kernels/sources/modules/initrams/configs/maps.
+--pretend/-p/p:  Check only. Nothing remove.
+--help/-h/-?/h/:     This help.
 
 CUSTOM can be one of:
 --ignore [TARGETS]:  Don't remove TARGETS.( or pass TARGETS in the /etc/kernel-cleaner.conf )
@@ -394,13 +394,13 @@ TARGETS must be separated by SPACE."
 
 case ${1} in
 
---list )
+--list | list | -l | l )
   init;
   list;
   exit 0
   ;;
 
---pretend )
+--pretend | pretend | -p | p )
   init;
   initrams;
   check_boot;
@@ -415,7 +415,7 @@ case ${1} in
   exit 0
   ;;
 
---run )
+--run | run | -r | r )
   init;
   initrams;
   check_boot;
@@ -431,7 +431,7 @@ case ${1} in
   exit 0
   ;;
 
---help | -h | -? | * )
+--help | help | -h | -? | h | * )
   help_kc;
   exit 0
   ;;
