@@ -431,22 +431,7 @@ case ${1} in
   exit 0
   ;;
 
---help )
-  help_kc;
-  exit 0
-  ;;
-
--h )
-  help_kc;
-  exit 0
-  ;;
-
--? )
-  help_kc;
-  exit 0
-  ;;
-
-* )
+--help | -h | -? | * )
   help_kc;
   exit 0
   ;;
