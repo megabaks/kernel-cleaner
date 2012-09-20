@@ -1,6 +1,7 @@
 #!/bin/bash
 # Copyright megabaks
 # Distributed under the terms of the GNU General Public License v3 or later
+#### check openrc ####
 [ -f "/etc/init.d/functions.sh" ] && . /etc/init.d/functions.sh
 #### colors ####
 green="\033[01;32m"
