@@ -239,7 +239,7 @@ check_mod(){
 	MOD_DIRS="${MOD_DIRS/"${moddir}"/}"
   done
   while read md;do
-	[ -n "${md}" ] && TRASH_MOD_DIRS="${TRASH_MOD_DIRS}
+	[ -n "${md}" ] && [ -d "/lib/modules/${md}" ] && TRASH_MOD_DIRS="${TRASH_MOD_DIRS}
 /lib/modules/${md}"
   done <<< "${MOD_DIRS}"
   REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
