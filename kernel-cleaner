@@ -327,22 +327,20 @@ remove(){
 	total_files="$(find ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } -type f | wc -l )"
 	echo -ne "${contrast}Would you like to remove this trash?${restore} [${green}Yes${restore}/${red}No${restore}] ";
 	while read x;do
-	  if [ "${x}" == "Yes" ] || [ "${x}" == "yes" ] || [ "${x}" == "Y" ] || [ "${x}" == "y" ] || [ "${x}" == "" ];then
-		echo -e "\n${green}Removing...${restore}"
-		[ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
-		[ -n "${REMOVE_DIRS}" ] && rm -r ${REMOVE_DIRS//\\n/ }
-		[ -n "${REMOVE_MOD_DIRS}" ] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
-		eend 0 2>/dev/null
-		echo -e "\n[ ${green}${total_space}${restore} ] Total space from ${green}${total_files}${restore} files were freed.\n"
-		exit 0
-	  else
-		if [ "${x}" == "No" ] || [ "${x}" == "no" ] || [ "${x}" == "n" ];then
-		  exit 0
-		else
-		  echo -ne "Sorry, response '${x}' not understood. [${green}Yes${restore}/${red}No${restore}] "
-		  continue
-		fi
-	  fi
+	  case ${x} in
+		Yes | YES | yes | Y | y | "" )
+		  echo -e "\n${green}Removing...${restore}"
+		  [ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
+		  [ -n "${REMOVE_DIRS}" ] && rm -r ${REMOVE_DIRS//\\n/ }
+		  [ -n "${REMOVE_MOD_DIRS}" ] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
+		  eend 0 2>/dev/null
+		  echo -e "\n[ ${green}${total_space}${restore} ] Total space from ${green}${total_files}${restore} files were freed.\n"
+		  exit 0;;
+		No | NO | no | N | n )
+		  exit 0;;
+		* ) echo -ne "Sorry, response '${x}' not understood. [${green}Yes${restore}/${red}No${restore}] "
+		  continue;;
+	  esac
 	done
   fi
 }
