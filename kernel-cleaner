@@ -249,7 +249,7 @@ ${TRASH_MOD_DIRS}"
 ############################################################################
 ################ sources ###################################################
 check_src(){
-for src_dir in `ls -d1 --color=never ${SRC}*`;do
+for src_dir in `ls -d1 --color=never ${SRC}* 2>/dev/null`;do
   [ -f "${src_dir}/Makefile" ] || REMOVE_DIRS="${REMOVE_DIRS}
 ${src_dir}"
 done
