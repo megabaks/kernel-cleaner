@@ -10,14 +10,14 @@
  SRC="/usr/src/linux"
  
  echo "Kernels....";
--KERNELS="$(parallel -j${threads} "file -F ' '" ::: /boot/* | awk '/Linux.*version/ {print $1,$9}')" ; eend 0 2>/dev/null
+-KERNELS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$9}')" ; eend 0 2>/dev/null
 +KERNELS="$(file -F ' ' /boot/* | awk '/Linux.*version/ {print $1,$9}')" ; eend 0 2>/dev/null
  echo "Initrams...";
--INITRAMS="$(parallel -j${threads} "file -F ' '" ::: /boot/* | awk '/compressed data/ {print $1,$2}')" ; eend 0 2>/dev/null
+-INITRAMS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/compressed data/ {print $1,$2}')" ; eend 0 2>/dev/null
 +INITRAMS="$(file -F ' ' /boot/* | awk '/compressed data/ {print $1,$2}')" ; eend 0 2>/dev/null
  echo "Configs....";
--parallel -j${threads} "file -F ' '" ::: /boot/* | grep -q 'ASCII' || \
--parallel -j${threads} "file -F ' '" ::: /boot/* | grep -q 'config build file' && \
+-parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | grep -q 'ASCII' || \
+-parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | grep -q 'config build file' && \
 +file -F ' ' /boot/* | grep -q 'ASCII' || \
 +file -F ' ' /boot/* | grep -q 'config build file' && \
  CONFIGS="$(grep -H 'Linux/' /boot/* 2>/dev/null | awk '{print $1,$3}')"
