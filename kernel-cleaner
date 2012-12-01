@@ -32,7 +32,7 @@ init(){
 	threads="$(( ${cores} + 1 ))"
 
 	SRC="/usr/src/linux"
-
+	PKGDB="/var/db/pkg"
 	echo "Kernels....";
 	KERNELS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$9}')" ; eend 0 2>/dev/null
 	echo "Initrams...";
@@ -254,6 +254,26 @@ check_src(){
 ${src_dir}"
 	done
 }
+pkg_orphans(){
+	used_kernels="$(awk '{print $2}' <<< "${KERNELS}")"
+	if `ls -d1 ${SRC}-* &>/dev/null`;then
+		while read dir;do
+			if [ -f "${dir}/Makefile" ];then
+				true_kernel "${dir}"
+				a_sources+="${dir} ${FULL_KERNEL}"$'\n'
+			fi
+		done <<< "$(ls -d1 --color=never ${SRC}-*)"
+	fi
+	all_sources="$(awk '{print $2}' <<< "${a_sources}" | awk '{print $1}')"
+	unused_sources="$(grep -v "${used_kernels}" <<< "${all_sources}")"
+	if [ -n "${unused_sources}" ];then
+		while read u_ver;do
+			orphan_dir="$(grep "${u_ver}" <<< "${a_sources}" | awk '{print $1}')"
+			ORPHAN_PKG+=" =$(grep -m1 "dir ${orphan_dir}" ${PKGDB}/sys-kernel/*/CONTENTS | cut -d\/ -f5,6)"
+			UNUSED_SOURCES+="${orphan_dir}"$'\n'
+		done <<< "${unused_sources}"
+	fi
+}
 ############################################################################
 ################ ignore ####################################################
 ignore(){
@@ -301,8 +321,8 @@ status(){
 	REMOVE_FILES="$(echo -e "${REMOVE_FILES}" | sort -u | sed '/^$/d')"
 	REMOVE_DIRS="$(echo -e "${REMOVE_DIRS}" | sort -u | sed '/^$/d')"
 	REMOVE_MOD_DIRS="$(echo -e "${REMOVE_MOD_DIRS}" | sort -u | sed '/^$/d')"
-
-	if [ -n "${REMOVE_FILES}" ] || [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
+	PKG="$(tr -d " =" <<< "${ORPHAN_PKG}" | sed '/^[ \t]$/d')"
+	if [ -n "${REMOVE_FILES}" ] || [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ] || [ -n "${PKG}" ];then
 		if [ -n "${REMOVE_FILES}" ];then
 			echo -e "\n${green}Next files will be removed:${restore}"
 			echo -e "${REMOVE_FILES}"
@@ -315,6 +335,12 @@ status(){
 			echo -e "${REMOVE_MOD_DIRS}"
 			echo
 		fi
+
+		if [ -n "${PKG}" ];then
+			echo -e "\n${green}Next packages will be removed:${restore}"
+			echo "${PKG}" | tr " " $'\n'
+			echo
+		fi
 	else
 		echo -e "\n${green}Who's here? o_O${restore}\n"
 	fi
@@ -322,9 +348,9 @@ status(){
 ############################################################################
 ################ remove ####################################################
 remove(){
-	if [ -n "${REMOVE_FILES}" ] || [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
-		total_space="$(du -shc ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } | tail -n1 | awk '{print $1}')"
-		total_files="$(find ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } -type f | wc -l )"
+	if [ -n "${REMOVE_FILES}" ] || [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ] || [ -n "${PKG}" ];then
+		total_space="$(du -shc ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } ${UNUSED_SOURCES//\\n/ } | tail -n1 | awk '{print $1}')"
+		total_files="$(find ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } ${UNUSED_SOURCES//\\n/ } -type f | wc -l )"
 		echo -ne "${contrast}Would you like to remove this trash?${restore} [${green}Yes${restore}/${red}No${restore}] ";
 		while read x;do
 			case ${x} in
@@ -333,6 +359,7 @@ remove(){
 					[ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
 					[ -n "${REMOVE_DIRS}" ] && rm -r ${REMOVE_DIRS//\\n/ }
 					[ -n "${REMOVE_MOD_DIRS}" ] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
+					[ -n "${ORPHAN_PKG}" ] && emerge -C ${ORPHAN_PKG}
 					eend 0 2>/dev/null
 					echo -e "\n[ ${green}${total_space}${restore} ] Total space from ${green}${total_files}${restore} files were freed.\n"
 					exit 0;;
@@ -367,6 +394,7 @@ list(){
 			[ -n "${SOURCES}" ] && echo -e "\n${green}Sources:${restore}\n${SOURCES%\\n}"
 			[ -n "${BROKEN_SOURCES}" ] && echo -e "\n${green}Broken_sources:${restore}\n${BROKEN_SOURCES%\\n}"
 		fi
+		[ -n "${ORPHAN_PKG}" ] && echo -e "${green}Unused_packages:${restore}\n `tr ' ' $'\n' <<< "${ORPHAN_PKG//=/}"`"
 		echo
 	)" | column -t
 }
@@ -396,6 +424,7 @@ TARGETS must be separated by SPACE."
 case ${1} in
 --list | list | -l | l )
 	init;
+	pkg_orphans;
 	list;
 	exit 0;;
 --pretend | pretend | -p | p )
@@ -405,6 +434,7 @@ case ${1} in
 	initrams_orphans;
 	orphan_configs;
 	orphan_maps;
+	pkg_orphans
 	check_mod;
 	check_src;
 	ignore "${*}";
@@ -418,6 +448,7 @@ case ${1} in
 	initrams_orphans;
 	orphan_configs;
 	orphan_maps;
+	pkg_orphans
 	check_mod;
 	check_src;
 	ignore "${*}";
