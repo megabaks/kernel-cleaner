@@ -10,10 +10,10 @@ restore="\033[00m"
 contrast="\033[1m"
 ####### check /boot ###########
 if grep "\<boot\>" /etc/fstab | grep -qv \#;then
-  if ! `grep -q "\<boot\>" /etc/mtab`;then
-	echo -e "\n${green}/boot${restore} ${red}is NOT mounted${restore}!!!\n"
-	exit 1
-  fi
+	if ! `grep -q "\<boot\>" /etc/mtab`;then
+		echo -e "\n${green}/boot${restore} ${red}is NOT mounted${restore}!!!\n"
+		exit 1
+	fi
 fi
 ####### ignore/force workaround
 IGNORE="${IGNORE} "
@@ -28,347 +28,347 @@ FORCE+=" $(sed -e "s|.*--force ||" -e "s| --.*||" -e "s| -.*||" <<< `echo "${*}"
 ############################################################################
 ################ init ######################################################
 init(){
-cores="$(awk '/cores/ {print $4}' /proc/cpuinfo | uniq)"
-threads="$(( ${cores} + 1 ))"
+	cores="$(awk '/cores/ {print $4}' /proc/cpuinfo | uniq)"
+	threads="$(( ${cores} + 1 ))"
 
-SRC="/usr/src/linux"
+	SRC="/usr/src/linux"
 
-echo "Kernels....";
-KERNELS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$9}')" ; eend 0 2>/dev/null
-echo "Initrams...";
-INITRAMS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/compressed data/ {print $1,$2}')" ; eend 0 2>/dev/null
-echo "Configs....";
-parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | grep -q 'ASCII' || \
-parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | grep -q 'config build file' && \
-CONFIGS="$(grep -H 'Linux/' /boot/* 2>/dev/null | awk '{print $1,$3}')"
-CONFIGS="${CONFIGS//:#/}" ; eend 0 2>/dev/null
-echo "Maps.......";
-ALL_MAPS="$(ls -1 --color=never /boot/System.map-* 2>/dev/null)" ; eend 0 2>/dev/null
+	echo "Kernels....";
+	KERNELS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$9}')" ; eend 0 2>/dev/null
+	echo "Initrams...";
+	INITRAMS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/compressed data/ {print $1,$2}')" ; eend 0 2>/dev/null
+	echo "Configs....";
+	parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | grep -q 'ASCII' || \
+	parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | grep -q 'config build file' && \
+	CONFIGS="$(grep -H 'Linux/' /boot/* 2>/dev/null | awk '{print $1,$3}')"
+	CONFIGS="${CONFIGS//:#/}" ; eend 0 2>/dev/null
+	echo "Maps.......";
+	ALL_MAPS="$(ls -1 --color=never /boot/System.map-* 2>/dev/null)" ; eend 0 2>/dev/null
 }
 ############################################################################
 ################ kernel path and real name #################################
 kernel_version() {
 makefile="${SRC}-${1}/Makefile"
-  if [ -f "${makefile}" ];then
-	VERSION="$(awk '/^VERSION =/ {print $3}' "${makefile}")"
-	PATCHLEVEL="$(awk '/^PATCHLEVEL =/ {print $3}' "${makefile}")"
-	SUBLEVEL="$(awk '/^SUBLEVEL =/ {print $3}' "${makefile}")"
-	EXTRAVERSION="$(awk '/^EXTRAVERSION =/ {print $3}' "${makefile}")"
-	FULL_KERNEL="${VERSION}.${PATCHLEVEL}.${SUBLEVEL}${EXTRAVERSION}"
-  fi
+	if [ -f "${makefile}" ];then
+		VERSION="$(awk '/^VERSION =/ {print $3}' "${makefile}")"
+		PATCHLEVEL="$(awk '/^PATCHLEVEL =/ {print $3}' "${makefile}")"
+		SUBLEVEL="$(awk '/^SUBLEVEL =/ {print $3}' "${makefile}")"
+		EXTRAVERSION="$(awk '/^EXTRAVERSION =/ {print $3}' "${makefile}")"
+		FULL_KERNEL="${VERSION}.${PATCHLEVEL}.${SUBLEVEL}${EXTRAVERSION}"
+	fi
 }
 
 true_kernel() {
-  if [ -n "${1}" ];then
-	KERNEL="${1##*linux-}"
-	KERNEL="${KERNEL%/}"
-  fi
+	if [ -n "${1}" ];then
+		KERNEL="${1##*linux-}"
+		KERNEL="${KERNEL%/}"
+	fi
 
-  if [ -d "${SRC}-${KERNEL}" ];then
-	kernel_version ${KERNEL}
-  else
-	for kernel in `ls -d --color=never "${SRC}"-*`;do
-	  kernel="${kernel##*/linux-}"
-	  kernel_version ${kernel}
-	  if [ "${KERNEL}" == "${FULL_KERNEL}" ];then
-		KERNEL="${kernel}"
-		break
-	  fi
-	done
-  fi
+	if [ -d "${SRC}-${KERNEL}" ];then
+		kernel_version ${KERNEL}
+	else
+		for kernel in `ls -d --color=never "${SRC}"-*`;do
+			kernel="${kernel##*/linux-}"
+			kernel_version ${kernel}
+			if [ "${KERNEL}" == "${FULL_KERNEL}" ];then
+				KERNEL="${kernel}"
+				break
+			fi
+		done
+	fi
 }
 ############################################################################
 ################ boot ######################################################
 check_boot(){
-while read file version;do
-  true_kernel ${version}
-  unset STOP FORCED
-  #### ignore ####
-if [ -n "${FULL_IGNORE/ /}" ];then
-  for ignored in ${FULL_IGNORE};do
-	if [ "${ignored}" == "${file}" ];then
-	  #### initrams ####
-	  while read ram_file ram_ver;do
-		if [ "${version}" == "${ram_ver}" ];then
-		  IGNORED+=" ${ram_file}"
-		fi
-	  done <<< "${INITRAMS_FULL}"
+	while read file version;do
+		true_kernel ${version}
+		unset STOP FORCED
+		#### ignore ####
+		if [ -n "${FULL_IGNORE/ /}" ];then
+			for ignored in ${FULL_IGNORE};do
+				if [ "${ignored}" == "${file}" ];then
+					#### initrams ####
+					while read ram_file ram_ver;do
+						if [ "${version}" == "${ram_ver}" ];then
+							IGNORED+=" ${ram_file}"
+						fi
+					done <<< "${INITRAMS_FULL}"
 
-	  #### configs ####
-	  while read conf_file conf_version;do
-		if [ "${version}" == "${conf_version}" ];then
-		  IGNORED+=" ${conf_file}"
-		fi
-	  done <<< "${CONFIGS}"
+					#### configs ####
+					while read conf_file conf_version;do
+						if [ "${version}" == "${conf_version}" ];then
+							IGNORED+=" ${conf_file}"
+						fi
+					done <<< "${CONFIGS}"
 
-	  #### maps #######
-	  while read imap_file;do
-		itrash="${imap_file%%${version}}"
-		imap_version="${imap_file##${itrash}}"
-		if [ "${version}" == "${imap_version}" ];then
-		  IGNORED+=" ${imap_file}"
+					#### maps #######
+					while read imap_file;do
+						itrash="${imap_file%%${version}}"
+						imap_version="${imap_file##${itrash}}"
+						if [ "${version}" == "${imap_version}" ];then
+							IGNORED+=" ${imap_file}"
+						fi
+					done <<< "${ALL_MAPS}"
+
+					#### modules ####
+					if [ -d "/lib/modules/${version}" ];then
+						IGNORED+=" /lib/modules/${version}"
+					fi
+				else
+					real_check;
+				fi
+			done
+		else
+			real_check;
 		fi
-	  done <<< "${ALL_MAPS}"
-	  
-	  #### modules ####
-	  if [ -d "/lib/modules/${version}" ];then
-		IGNORED+=" /lib/modules/${version}"
-	  fi
-	else
-	  real_check;
-	fi
-  done
-else
-  real_check;
-fi
-done <<< "${KERNELS}"
+	done <<< "${KERNELS}"
 }
 ############################################################################
 ################ real_check ################################################
 real_check(){
-force_deps
-if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ] || [ -n "${FORCED}" ];then
-  REMOVE_FILES="${REMOVE_FILES}
+	force_deps
+	if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ] || [ -n "${FORCED}" ];then
+		REMOVE_FILES="${REMOVE_FILES}
 ${file}"
 
-  #### initrams ####
-  while read ram_file ram_ver;do
-	if [ "${version}" == "${ram_ver}" ];then
-	  REMOVE_FILES="${REMOVE_FILES}
+		#### initrams ####
+		while read ram_file ram_ver;do
+			if [ "${version}" == "${ram_ver}" ];then
+				REMOVE_FILES="${REMOVE_FILES}
 ${ram_file}"
-	fi
-  done <<< "${INITRAMS_FULL}"
+			fi
+		done <<< "${INITRAMS_FULL}"
 
-  #### configs ####
-  while read conf_file conf_version;do
-	if [ "${version}" == "${conf_version}" ];then
-	  REMOVE_FILES="${REMOVE_FILES}
+		#### configs ####
+		while read conf_file conf_version;do
+			if [ "${version}" == "${conf_version}" ];then
+				REMOVE_FILES="${REMOVE_FILES}
 ${conf_file}"
-	fi
-  done <<< "${CONFIGS}"
+			fi
+		done <<< "${CONFIGS}"
 
-  #### maps #######
-  while read map_file;do
-	trash="${map_file%%${version}}"
-	map_version="${map_file##${trash}}"
-	if [ "${version}" == "${map_version}" ];then
-	  REMOVE_FILES="${REMOVE_FILES}
+		#### maps #######
+		while read map_file;do
+			trash="${map_file%%${version}}"
+			map_version="${map_file##${trash}}"
+			if [ "${version}" == "${map_version}" ];then
+				REMOVE_FILES="${REMOVE_FILES}
 ${map_file}"
-	fi
-  done <<< "${ALL_MAPS}"
-	  
-  #### modules ####
-  if [ -d "/lib/modules/${version}" ];then
-	REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
+			fi
+		done <<< "${ALL_MAPS}"
+
+		#### modules ####
+		if [ -d "/lib/modules/${version}" ];then
+			REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
 /lib/modules/${version}"
-  fi
-fi
+		fi
+	fi
 }
 ############################################################################
 ################ initrams ##################################################
 initrams(){
-  while read initram compressor;do
-	if [ -n "${compressor}" ];then
-	  [ "${compressor}" == "gzip" ]  && decompressor="zcat"
-	  [ "${compressor}" == "bzip2" ] && decompressor="bzcat"
-	  [ "${compressor}" == "lzop" ]  && decompressor="lzop -c"
-	  [ "${compressor}" == "XZ" ]    && decompressor="xzcat"
-	  [ "${compressor}" == "LZMA" ]  && decompressor="lzcat"
-	  initram_ver="$( "${decompressor}" "${initram}" | strings | awk '/^vermagic=[[:digit:]]/ {print $1}' | sort -u | sed 's|vermagic=||')"
-	  INITRAMS_FULL="${INITRAMS_FULL}
+	while read initram compressor;do
+		if [ -n "${compressor}" ];then
+			[ "${compressor}" == "gzip" ]  && decompressor="zcat"
+			[ "${compressor}" == "bzip2" ] && decompressor="bzcat"
+			[ "${compressor}" == "lzop" ]  && decompressor="lzop -c"
+			[ "${compressor}" == "XZ" ]    && decompressor="xzcat"
+			[ "${compressor}" == "LZMA" ]  && decompressor="lzcat"
+			initram_ver="$( "${decompressor}" "${initram}" | strings | awk '/^vermagic=[[:digit:]]/ {print $1}' | sort -u | sed 's|vermagic=||')"
+			INITRAMS_FULL="${INITRAMS_FULL}
 ${initram} ${initram_ver}"
-	fi
-  done <<< "${INITRAMS}"
+		fi
+	done <<< "${INITRAMS}"
 }
 initrams_orphans(){
-  ORPHANS="${INITRAMS_FULL}"
-  while read kernel_file kernel_ver;do
-	while read orphan_file orphan_ver;do
-	  if [ "${kernel_ver}" == "${orphan_ver}" ];then
-		ORPHANS="${ORPHANS/"${orphan_file} ${orphan_ver}"/}"
-	  fi
-	done <<< "${INITRAMS_FULL}"
-  done <<< "${KERNELS}"
-  ORPHANS="$( echo -e "${ORPHANS}" | awk '{print $1}' )"
-  REMOVE_FILES="${REMOVE_FILES}
+	ORPHANS="${INITRAMS_FULL}"
+	while read kernel_file kernel_ver;do
+		while read orphan_file orphan_ver;do
+			if [ "${kernel_ver}" == "${orphan_ver}" ];then
+				ORPHANS="${ORPHANS/"${orphan_file} ${orphan_ver}"/}"
+			fi
+		done <<< "${INITRAMS_FULL}"
+	done <<< "${KERNELS}"
+	ORPHANS="$( echo -e "${ORPHANS}" | awk '{print $1}' )"
+	REMOVE_FILES="${REMOVE_FILES}
 ${ORPHANS}"
 }
 ############################################################################
 ################ configs ###################################################
 orphan_configs(){
-  CONFIGS_ORPHANS="${CONFIGS}"
-  while read config conf_ver;do
-	while read kernel_file kernel_ver;do
-	  if [ "${kernel_ver}" == "${conf_ver}" ];then
-		CONFIGS_ORPHANS="${CONFIGS_ORPHANS//"${config} ${conf_ver}"/}"
-	  fi
-	done <<< "${KERNELS}"
-  done <<< "${CONFIGS}"
-  CONFIGS_ORPHANS="$( awk '{print $1}' <<< "${CONFIGS_ORPHANS}" )"
-  REMOVE_FILES="${REMOVE_FILES}
+	CONFIGS_ORPHANS="${CONFIGS}"
+	while read config conf_ver;do
+		while read kernel_file kernel_ver;do
+			if [ "${kernel_ver}" == "${conf_ver}" ];then
+				CONFIGS_ORPHANS="${CONFIGS_ORPHANS//"${config} ${conf_ver}"/}"
+			fi
+		done <<< "${KERNELS}"
+	done <<< "${CONFIGS}"
+	CONFIGS_ORPHANS="$( awk '{print $1}' <<< "${CONFIGS_ORPHANS}" )"
+	REMOVE_FILES="${REMOVE_FILES}
 ${CONFIGS_ORPHANS}"
 }
 ############################################################################
 ################ System.map ################################################
 orphan_maps(){
-  MAPS_ORPHANS="${ALL_MAPS}"
-  while read m_file;do
-	while read k_file k_ver;do
-	  trash="${m_file%%${k_ver}}"
-	  m_ver="${m_file##${trash}}"
-	  if [ "${k_ver}" == "${m_ver}" ];then
-		MAPS_ORPHANS="${MAPS_ORPHANS/"${m_file}"*/}"
-	  fi
-	done <<< "${KERNELS}"
-  done <<< "${ALL_MAPS}"
-  MAPS_ORPHANS="$( awk '{print $1}' <<< "${MAPS_ORPHANS}" )"
-  REMOVE_FILES="${REMOVE_FILES}
+	MAPS_ORPHANS="${ALL_MAPS}"
+	while read m_file;do
+		while read k_file k_ver;do
+			trash="${m_file%%${k_ver}}"
+			m_ver="${m_file##${trash}}"
+			if [ "${k_ver}" == "${m_ver}" ];then
+				MAPS_ORPHANS="${MAPS_ORPHANS/"${m_file}"*/}"
+			fi
+		done <<< "${KERNELS}"
+	done <<< "${ALL_MAPS}"
+	MAPS_ORPHANS="$( awk '{print $1}' <<< "${MAPS_ORPHANS}" )"
+	REMOVE_FILES="${REMOVE_FILES}
 ${MAPS_ORPHANS}"
 }
 ############################################################################
 ################ modules ###################################################
 check_mod(){
-  VERSIONS="$( echo -e "${KERNELS}" | awk '{print $2}' | uniq )"
-  MOD_DIRS="$(ls -1 --color=never /lib/modules/)"
-  TRASH_DIR="${MOD_DIRS}"
-  while read mod_dir;do
-	while read ver;do
-	  [ "${mod_dir}" == "${ver}" ] && GOOD_MOD+="${mod_dir} "
-	done <<< "${VERSIONS}"
-  done <<< "${MOD_DIRS}"
-  for moddir in ${GOOD_MOD};do
-	MOD_DIRS="${MOD_DIRS/"${moddir}"/}"
-  done
-  while read md;do
-	[ -n "${md}" ] && [ -d "/lib/modules/${md}" ] && TRASH_MOD_DIRS="${TRASH_MOD_DIRS}
+	VERSIONS="$( echo -e "${KERNELS}" | awk '{print $2}' | uniq )"
+	MOD_DIRS="$(ls -1 --color=never /lib/modules/)"
+	TRASH_DIR="${MOD_DIRS}"
+	while read mod_dir;do
+		while read ver;do
+			[ "${mod_dir}" == "${ver}" ] && GOOD_MOD+="${mod_dir} "
+		done <<< "${VERSIONS}"
+	done <<< "${MOD_DIRS}"
+	for moddir in ${GOOD_MOD};do
+		MOD_DIRS="${MOD_DIRS/"${moddir}"/}"
+	done
+	while read md;do
+		[ -n "${md}" ] && [ -d "/lib/modules/${md}" ] && TRASH_MOD_DIRS="${TRASH_MOD_DIRS}
 /lib/modules/${md}"
-  done <<< "${MOD_DIRS}"
-  REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
+	done <<< "${MOD_DIRS}"
+	REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
 ${TRASH_MOD_DIRS}"
 }
 ############################################################################
 ################ sources ###################################################
 check_src(){
-for src_dir in `ls -d1 --color=never ${SRC}* 2>/dev/null`;do
-  [ -f "${src_dir}/Makefile" ] || REMOVE_DIRS="${REMOVE_DIRS}
+	for src_dir in `ls -d1 --color=never ${SRC}* 2>/dev/null`;do
+		[ -f "${src_dir}/Makefile" ] || REMOVE_DIRS="${REMOVE_DIRS}
 ${src_dir}"
-done
+	done
 }
 ############################################################################
 ################ ignore ####################################################
 ignore(){
-for ignor in ${FULL_IGNORE} $IGNORED;do
-  if [ -f "${ignor}" ] || [ -d "${ignor}" ] ;then
-	echo -e "${green}Ignoring:${restore}\t${ignor}"
-	[ -f "${ignor}" ] && REMOVE_FILES="${REMOVE_FILES/"${ignor}"/}"
-	[ -d "${ignor}" ] && REMOVE_DIRS="${REMOVE_DIRS/"${ignor}"/}"
-	[ -d "${ignor}" ] && REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${ignor}"/}"
-  else
-	echo -e "${red}Not found:${restore}\t${ignor}"
-  fi
-done
+	for ignor in ${FULL_IGNORE} $IGNORED;do
+		if [ -f "${ignor}" ] || [ -d "${ignor}" ] ;then
+			echo -e "${green}Ignoring:${restore}\t${ignor}"
+			[ -f "${ignor}" ] && REMOVE_FILES="${REMOVE_FILES/"${ignor}"/}"
+			[ -d "${ignor}" ] && REMOVE_DIRS="${REMOVE_DIRS/"${ignor}"/}"
+			[ -d "${ignor}" ] && REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${ignor}"/}"
+		else
+			echo -e "${red}Not found:${restore}\t${ignor}"
+		fi
+	done
 }
 ############################################################################
 ################ force #####################################################
 force(){
-for force in ${FORCE};do
-  if [ -f "${force}" ] || [ -d "${force}" ] ;then
-	echo -e "${green}Forcing remove:${restore}\t${force}"
-	[ -f "${force}" ] && REMOVE_FILES="${REMOVE_FILES}
+	for force in ${FORCE};do
+		if [ -f "${force}" ] || [ -d "${force}" ] ;then
+			echo -e "${green}Forcing remove:${restore}\t${force}"
+			[ -f "${force}" ] && REMOVE_FILES="${REMOVE_FILES}
 ${force}"
-	[ -d "${force}" ] && REMOVE_DIRS="${REMOVE_DIRS}
+			[ -d "${force}" ] && REMOVE_DIRS="${REMOVE_DIRS}
 ${force}"
-  else
-	echo -e "${red}Not found:${restore}\t${force}"
-  fi
-done
+		else
+			echo -e "${red}Not found:${restore}\t${force}"
+		fi
+	done
 }
 ############################################################################
 ################ force-deps ################################################
 force_deps(){
-  if [ -n "${FORCED_DEPS}" ];then
-	for forced in ${FORCE};do
-	  if [ "${forced}" == "${file}" ];then
-		unset STOP
-		FORCED="1"
-	  fi
-	done
-  fi
+	if [ -n "${FORCED_DEPS}" ];then
+		for forced in ${FORCE};do
+			if [ "${forced}" == "${file}" ];then
+				unset STOP
+				FORCED="1"
+			fi
+		done
+	fi
 }
 ############################################################################
 ################ status ####################################################
 status(){
-  REMOVE_FILES="$(echo -e "${REMOVE_FILES}" | sort -u | sed '/^$/d')"
-  REMOVE_DIRS="$(echo -e "${REMOVE_DIRS}" | sort -u | sed '/^$/d')"
-  REMOVE_MOD_DIRS="$(echo -e "${REMOVE_MOD_DIRS}" | sort -u | sed '/^$/d')"
+	REMOVE_FILES="$(echo -e "${REMOVE_FILES}" | sort -u | sed '/^$/d')"
+	REMOVE_DIRS="$(echo -e "${REMOVE_DIRS}" | sort -u | sed '/^$/d')"
+	REMOVE_MOD_DIRS="$(echo -e "${REMOVE_MOD_DIRS}" | sort -u | sed '/^$/d')"
 
-  if [ -n "${REMOVE_FILES}" ] || [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
-	if [ -n "${REMOVE_FILES}" ];then
-	  echo -e "\n${green}Next files will be removed:${restore}"
-	  echo -e "${REMOVE_FILES}"
-	  echo
+	if [ -n "${REMOVE_FILES}" ] || [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
+		if [ -n "${REMOVE_FILES}" ];then
+			echo -e "\n${green}Next files will be removed:${restore}"
+			echo -e "${REMOVE_FILES}"
+			echo
+		fi
+
+		if [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
+			echo -e "\n${green}Next directories will be removed:${restore}"
+			echo -e "${REMOVE_DIRS}"
+			echo -e "${REMOVE_MOD_DIRS}"
+			echo
+		fi
+	else
+		echo -e "\n${green}Who's here? o_O${restore}\n"
 	fi
-  
-	if [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
-	  echo -e "\n${green}Next directories will be removed:${restore}"
-	  echo -e "${REMOVE_DIRS}"
-	  echo -e "${REMOVE_MOD_DIRS}"
-	  echo
-	fi
-  else
-	echo -e "\n${green}Who's here? o_O${restore}\n"
-  fi
 }
 ############################################################################
 ################ remove ####################################################
 remove(){
-  if [ -n "${REMOVE_FILES}" ] || [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
-	total_space="$(du -shc ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } | tail -n1 | awk '{print $1}')"
-	total_files="$(find ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } -type f | wc -l )"
-	echo -ne "${contrast}Would you like to remove this trash?${restore} [${green}Yes${restore}/${red}No${restore}] ";
-	while read x;do
-	  case ${x} in
-		Yes | YES | yes | Y | y | "" )
-		  echo -e "\n${green}Removing...${restore}"
-		  [ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
-		  [ -n "${REMOVE_DIRS}" ] && rm -r ${REMOVE_DIRS//\\n/ }
-		  [ -n "${REMOVE_MOD_DIRS}" ] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
-		  eend 0 2>/dev/null
-		  echo -e "\n[ ${green}${total_space}${restore} ] Total space from ${green}${total_files}${restore} files were freed.\n"
-		  exit 0;;
-		No | NO | no | N | n )
-		  exit 0;;
-		* ) echo -ne "Sorry, response '${x}' not understood. [${green}Yes${restore}/${red}No${restore}] "
-		  continue;;
-	  esac
-	done
-  fi
+	if [ -n "${REMOVE_FILES}" ] || [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ];then
+		total_space="$(du -shc ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } | tail -n1 | awk '{print $1}')"
+		total_files="$(find ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } -type f | wc -l )"
+		echo -ne "${contrast}Would you like to remove this trash?${restore} [${green}Yes${restore}/${red}No${restore}] ";
+		while read x;do
+			case ${x} in
+				Yes | YES | yes | Y | y | "" )
+					echo -e "\n${green}Removing...${restore}"
+					[ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
+					[ -n "${REMOVE_DIRS}" ] && rm -r ${REMOVE_DIRS//\\n/ }
+					[ -n "${REMOVE_MOD_DIRS}" ] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
+					eend 0 2>/dev/null
+					echo -e "\n[ ${green}${total_space}${restore} ] Total space from ${green}${total_files}${restore} files were freed.\n"
+					exit 0;;
+				No | NO | no | N | n )
+					exit 0;;
+				* ) echo -ne "Sorry, response '${x}' not understood. [${green}Yes${restore}/${red}No${restore}] "
+					continue;;
+			esac
+		done
+	fi
 }
 ############################################################################
 ################ list ######################################################
 list(){
-echo -e "$(
-  initrams;
-  [ -n "${KERNELS}" ] && echo -e "${green}Kernels:${restore}\n `awk '{print $1,$2}' <<< "${KERNELS}"`"
-  [ -n "${INITRAMS}" ] && echo -e "${green}Initrams:${restore}\n `awk '{print $1,$2}' <<< "${INITRAMS_FULL}"`"
-  [ -n "${CONFIGS}" ] && echo -e "${green}Configs:${restore}\n `awk '{print $1,$2}' <<< "${CONFIGS}"`"
-  [ -n "${ALL_MAPS}" ] && echo -e "${green}Maps:${restore}\n `awk '{print $1}' <<< "${ALL_MAPS}"`"
-  ls -d1 /lib/modules/* &>/dev/null && echo -e "\n${green}Modules:${restore}\n `ls -d1 --color=never /lib/modules/*`"
+	echo -e "$(
+		initrams;
+		[ -n "${KERNELS}" ] && echo -e "${green}Kernels:${restore}\n `awk '{print $1,$2}' <<< "${KERNELS}"`"
+		[ -n "${INITRAMS}" ] && echo -e "${green}Initrams:${restore}\n `awk '{print $1,$2}' <<< "${INITRAMS_FULL}"`"
+		[ -n "${CONFIGS}" ] && echo -e "${green}Configs:${restore}\n `awk '{print $1,$2}' <<< "${CONFIGS}"`"
+		[ -n "${ALL_MAPS}" ] && echo -e "${green}Maps:${restore}\n `awk '{print $1}' <<< "${ALL_MAPS}"`"
+		ls -d1 /lib/modules/* &>/dev/null && echo -e "\n${green}Modules:${restore}\n `ls -d1 --color=never /lib/modules/*`"
 
-  if `ls -d1 ${SRC}-* &>/dev/null`;then
-	while read dir;do
-	  if [ -f "${dir}/Makefile" ];then
-		true_kernel "${dir}"
-		SOURCES+="${dir} ${FULL_KERNEL}\n"
-	  else
-		BROKEN_SOURCES+="${dir}\n"
-	  fi
-	done <<< "$(ls -d1 --color=never ${SRC}-*)"
-	[ -n "${SOURCES}" ] && echo -e "\n${green}Sources:${restore}\n${SOURCES%\\n}"
-	[ -n "${BROKEN_SOURCES}" ] && echo -e "\n${green}Broken_sources:${restore}\n${BROKEN_SOURCES%\\n}"
-  fi
-  echo
-)" | column -t
+		if `ls -d1 ${SRC}-* &>/dev/null`;then
+			while read dir;do
+				if [ -f "${dir}/Makefile" ];then
+					true_kernel "${dir}"
+					SOURCES+="${dir} ${FULL_KERNEL}\n"
+				else
+					BROKEN_SOURCES+="${dir}\n"
+				fi
+			done <<< "$(ls -d1 --color=never ${SRC}-*)"
+			[ -n "${SOURCES}" ] && echo -e "\n${green}Sources:${restore}\n${SOURCES%\\n}"
+			[ -n "${BROKEN_SOURCES}" ] && echo -e "\n${green}Broken_sources:${restore}\n${BROKEN_SOURCES%\\n}"
+		fi
+		echo
+	)" | column -t
 }
 ############################################################################
 ################ help ######################################################
@@ -393,49 +393,39 @@ TARGETS must be separated by SPACE."
 }
 ############################################################################
 ################ lets go! ##################################################
-
 case ${1} in
-
 --list | list | -l | l )
-  init;
-  list;
-  exit 0
-  ;;
-
+	init;
+	list;
+	exit 0;;
 --pretend | pretend | -p | p )
-  init;
-  initrams;
-  check_boot;
-  initrams_orphans;
-  orphan_configs;
-  orphan_maps;
-  check_mod;
-  check_src;
-  ignore "${*}";
-  force "${*}";
-  status;
-  exit 0
-  ;;
-
+	init;
+	initrams;
+	check_boot;
+	initrams_orphans;
+	orphan_configs;
+	orphan_maps;
+	check_mod;
+	check_src;
+	ignore "${*}";
+	force "${*}";
+	status;
+	exit 0;;
 --run | run | -r | r )
-  init;
-  initrams;
-  check_boot;
-  initrams_orphans;
-  orphan_configs;
-  orphan_maps;
-  check_mod;
-  check_src;
-  ignore "${*}";
-  force "${*}";
-  status;
-  remove;
-  exit 0
-  ;;
-
+	init;
+	initrams;
+	check_boot;
+	initrams_orphans;
+	orphan_configs;
+	orphan_maps;
+	check_mod;
+	check_src;
+	ignore "${*}";
+	force "${*}";
+	status;
+	remove;
+	exit 0;;
 --help | help | -h | -? | h | * )
-  help_kc;
-  exit 0
-  ;;
-
+	help_kc;
+	exit 0;;
 esac
