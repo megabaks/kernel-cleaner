@@ -321,7 +321,7 @@ status(){
 	REMOVE_FILES="$(echo -e "${REMOVE_FILES}" | sort -u | sed '/^$/d')"
 	REMOVE_DIRS="$(echo -e "${REMOVE_DIRS}" | sort -u | sed '/^$/d')"
 	REMOVE_MOD_DIRS="$(echo -e "${REMOVE_MOD_DIRS}" | sort -u | sed '/^$/d')"
-	PKG="$(tr -d " =" <<< "${ORPHAN_PKG}" | sed '/^[ \t]$/d')"
+	PKG="$(tr -d "=" <<< "${ORPHAN_PKG# }" | sed '/^[ \t]$/d')"
 	if [ -n "${REMOVE_FILES}" ] || [ -n "${REMOVE_DIRS}" ] || [ -n "${REMOVE_MOD_DIRS}" ] || [ -n "${PKG}" ];then
 		if [ -n "${REMOVE_FILES}" ];then
 			echo -e "\n${green}Next files will be removed:${restore}"
