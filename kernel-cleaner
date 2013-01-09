@@ -28,13 +28,22 @@ FORCE+=" $(sed -e "s|.*--force ||" -e "s| --.*||" -e "s| -.*||" <<< `echo "${*}"
 ############################################################################
 ################ init ######################################################
 init(){
+	FILE_VERSION="$(file -v | grep -o "[[:digit:]].*")"
+
 	cores="$(awk '/cores/ {print $4}' /proc/cpuinfo | uniq)"
 	threads="$(( ${cores} + 1 ))"
 
 	SRC="/usr/src/linux"
 	PKGDB="/var/db/pkg"
-	echo "Kernels....";
-	KERNELS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$9}')" ; eend 0 2>/dev/null
+
+	if [[ "${FILE_VERSION}" != "5.12" ]];then
+		echo "Kernels....";
+		KERNELS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$9}')" ; eend 0 2>/dev/null
+	else
+		echo "Kernels....";
+		KERNELS="$(parallel -j${threads} "file -k -F ' '" ::: /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$18}')" ; eend 0 2>/dev/null
+	fi
+
 	echo "Initrams...";
 	INITRAMS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/compressed data/ {print $1,$2}')" ; eend 0 2>/dev/null
 	echo "Configs....";
