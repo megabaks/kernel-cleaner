@@ -10,7 +10,7 @@
  	SRC="/usr/src/linux"
  	PKGDB="/var/db/pkg"
  
- 	if [[ "${FILE_VERSION}" != "5.12" ]];then
+ 	if [[ "${FILE_VERSION}" != "5.12" || -d /var/db/pkg/sys-apps/file-5.12-r1/ ]];then
  		echo "Kernels....";
 -		KERNELS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$9}')" ; eend 0 2>/dev/null
 +		KERNELS="$(file -F ' ' /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$9}')" ; eend 0 2>/dev/null
