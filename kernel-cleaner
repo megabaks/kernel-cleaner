@@ -87,6 +87,50 @@ true_kernel() {
 	fi
 }
 ############################################################################
+################ remove unneeded kernel ####################################
+choose_trash(){
+	PS3=`echo -e "${contrast}Choose kernel_file for remove:${restore} "`
+	select cf in `awk '{print $1}' <<< "${KERNELS}"`;do
+		echo -n "${cf}"
+		break
+	done
+}
+rm_trash(){
+	echo -e "\n${contrast}Exists kernels:${restore}\n"
+	echo -e "\n${KERNELS}" | column -t
+	echo -ne "\n${contrast}Would you like remove some kernels?${restore} [${green}Yes${restore}/${red}No${restore}] "
+	while read x;do
+		case ${x} in
+			Yes | YES | yes | Y | y | "" )
+				trash_files+=" $(choose_trash)"
+				while [[ -z "${enough}" ]];do
+					echo -ne "${contrast}More?${restore} [${green}Yes${restore}/${red}No${restore}] "
+					while read y;do
+						case ${y} in
+							Yes | YES | yes | Y | y | "" )
+								trash_files+=" $(choose_trash)"
+								break;;
+							No | NO | no | N | n )
+								enough="1"
+								break;;
+							* ) echo -ne "Sorry, response '${y}' not understood. [${green}Yes${restore}/${red}No${restore}] "
+								continue;;
+						esac
+					done
+				done
+				break;;
+			No | NO | no | N | n )
+				break;;
+			* ) echo -ne "Sorry, response '${x}' not understood. [${green}Yes${restore}/${red}No${restore}] "
+				continue;;
+		esac
+	done
+#	for tk in ${trash_files};do
+#		KERNELS="$(sed -e "s|^${tk}.*$||" -e '/^$/d' <<< "${KERNELS}")"
+#	done
+	FORCE+=" ${trash_files}"
+}
+############################################################################
 ################ boot ######################################################
 check_boot(){
 	while read file version;do
@@ -438,6 +482,7 @@ case ${1} in
 	exit 0;;
 --pretend | pretend | -p | p )
 	init;
+	rm_trash;
 	initrams;
 	check_boot;
 	initrams_orphans;
@@ -452,6 +497,7 @@ case ${1} in
 	exit 0;;
 --run | run | -r | r )
 	init;
+	rm_trash;
 	initrams;
 	check_boot;
 	initrams_orphans;
