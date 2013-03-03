@@ -125,9 +125,6 @@ rm_trash(){
 				continue;;
 		esac
 	done
-#	for tk in ${trash_files};do
-#		KERNELS="$(sed -e "s|^${tk}.*$||" -e '/^$/d' <<< "${KERNELS}")"
-#	done
 	FORCE+=" ${trash_files}"
 }
 ############################################################################
