@@ -1,27 +1,26 @@
 #!/bin/bash
 # Copyright megabaks
 # Distributed under the terms of the GNU General Public License v3 or later
-#### check openrc ####
+####### check openrc ###############
 [ -f "/etc/init.d/functions.sh" ] && . /etc/init.d/functions.sh
-#### colors ####
+####### colors #####################
 green="\033[01;32m"
 red="\033[01;31m"
 restore="\033[00m"
 contrast="\033[1m"
-####### check /boot ###########
+####### check /boot ################
 if grep "\<boot\>" /etc/fstab | grep -qv \#;then
 	if ! `grep -q "\<boot\>" /etc/mtab`;then
 		echo -e "\n${green}/boot${restore} ${red}is NOT mounted${restore}!!!\n"
 		exit 1
 	fi
 fi
-####### ignore/force workaround
+####### ignore/force workaround ####
 IGNORE="${IGNORE} "
-#### config ####
+#### config ########################
 [ -z "${CONFIG}" ] && CONFIG="/etc/kernel-cleaner.conf"
 [ -f "${CONFIG}" ] && . "${CONFIG}"
 FULL_IGNORE="$IGNORE"
-echo "${*}" | grep -q "\--force-deps\>" && FORCED_DEPS="1"
 FULL_IGNORE+=" $(sed -e "s|.*--ignore ||" -e "s| --.*||" -e "s| -.*||"<<< `echo "${*}" | grep '\--ignore' `)"
 FULL_IGNORE="$(echo ${FULL_IGNORE} | tr " " "\n" | uniq | tr "\n" " ")"
 FORCE+=" $(sed -e "s|.*--force ||" -e "s| --.*||" -e "s| -.*||" <<< `echo "${*}" | grep '\--force' `)"
@@ -95,20 +94,27 @@ choose_trash(){
 		break
 	done
 }
+clean_kernels(){
+	trash_files+=" $(choose_trash)"
+	for tk in ${trash_files};do
+		KERNELS="$(sed -e "s|^${tk} .*$||" -e '/^$/d' <<< "${KERNELS}")"
+	done
+}
 rm_trash(){
+	[[ "$(echo "${KERNELS}" | wc -l)" == "1" ]] && return 0;
 	echo -e "\n${contrast}Exists kernels:${restore}\n"
 	echo -e "\n${KERNELS}" | column -t
 	echo -ne "\n${contrast}Would you like remove some kernels?${restore} [${green}Yes${restore}/${red}No${restore}] "
 	while read x;do
 		case ${x} in
 			Yes | YES | yes | Y | y | "" )
-				trash_files+=" $(choose_trash)"
-				while [[ -z "${enough}" ]];do
+				clean_kernels;
+				while [[ -z "${enough}" && "$(echo "${KERNELS}" | wc -l)" != "1" ]];do
 					echo -ne "${contrast}More?${restore} [${green}Yes${restore}/${red}No${restore}] "
 					while read y;do
 						case ${y} in
 							Yes | YES | yes | Y | y | "" )
-								trash_files+=" $(choose_trash)"
+								clean_kernels;
 								break;;
 							No | NO | no | N | n )
 								enough="1"
@@ -132,7 +138,7 @@ rm_trash(){
 check_boot(){
 	while read file version;do
 		true_kernel ${version}
-		unset STOP FORCED
+		unset STOP
 		#### ignore ####
 		if [ -n "${FULL_IGNORE/ /}" ];then
 			for ignored in ${FULL_IGNORE};do
@@ -176,8 +182,7 @@ check_boot(){
 ############################################################################
 ################ real_check ################################################
 real_check(){
-	force_deps
-	if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ] || [ -n "${FORCED}" ];then
+	if ! [ -f "${SRC}-${KERNEL}/Makefile" ] && ! [ -d "/lib/modules/${version}" ];then
 		REMOVE_FILES="${REMOVE_FILES}
 ${file}"
 
@@ -189,7 +194,7 @@ ${ram_file}"
 			fi
 		done <<< "${INITRAMS_FULL}"
 
-		#### configs ####
+		#### configs #####
 		while read conf_file conf_version;do
 			if [ "${version}" == "${conf_version}" ];then
 				REMOVE_FILES="${REMOVE_FILES}
@@ -197,7 +202,7 @@ ${conf_file}"
 			fi
 		done <<< "${CONFIGS}"
 
-		#### maps #######
+		#### maps ########
 		while read map_file;do
 			trash="${map_file%%${version}}"
 			map_version="${map_file##${trash}}"
@@ -207,7 +212,7 @@ ${map_file}"
 			fi
 		done <<< "${ALL_MAPS}"
 
-		#### modules ####
+		#### modules #####
 		if [ -d "/lib/modules/${version}" ];then
 			REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
 /lib/modules/${version}"
@@ -299,9 +304,15 @@ ${TRASH_MOD_DIRS}"
 ############################################################################
 ################ sources ###################################################
 check_src(){
-	for src_dir in `ls -d1 --color=never ${SRC}* 2>/dev/null`;do
-		[ -f "${src_dir}/Makefile" ] || REMOVE_DIRS="${REMOVE_DIRS}
+	for src_dir in `ls -d1 --color=never ${SRC}-* 2>/dev/null`;do
+		parent_pkg="$(grep -m1 "dir ${src_dir}" ${PKGDB}/sys-kernel/*/CONTENTS | cut -d\/ -f5,6)"
+		if grep -q "${parent_pkg}" <<< "${ORPHAN_PKG}";then
+			REMOVE_DIRS="${REMOVE_DIRS}
 ${src_dir}"
+		elif [ ! -f "${src_dir}/Makefile" ];then
+			REMOVE_DIRS="${REMOVE_DIRS}
+${src_dir}"
+		fi
 	done
 }
 pkg_orphans(){
@@ -354,18 +365,6 @@ ${force}"
 	done
 }
 ############################################################################
-################ force-deps ################################################
-force_deps(){
-	if [ -n "${FORCED_DEPS}" ];then
-		for forced in ${FORCE};do
-			if [ "${forced}" == "${file}" ];then
-				unset STOP
-				FORCED="1"
-			fi
-		done
-	fi
-}
-############################################################################
 ################ status ####################################################
 status(){
 	REMOVE_FILES="$(echo -e "${REMOVE_FILES}" | sort -u | sed '/^$/d')"
@@ -407,9 +406,9 @@ remove(){
 				Yes | YES | yes | Y | y | "" )
 					echo -e "\n${green}Removing...${restore}"
 					[ -n "${REMOVE_FILES}" ] && rm -f  ${REMOVE_FILES//\\n/ }
+					[ -n "${ORPHAN_PKG}" ] && emerge -C ${ORPHAN_PKG}
 					[ -n "${REMOVE_DIRS}" ] && rm -r ${REMOVE_DIRS//\\n/ }
 					[ -n "${REMOVE_MOD_DIRS}" ] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
-					[ -n "${ORPHAN_PKG}" ] && emerge -C ${ORPHAN_PKG}
 					eend 0 2>/dev/null
 					echo -e "\n[ ${green}${total_space}${restore} ] Total space from ${green}${total_files}${restore} files were freed.\n"
 					exit 0;;
@@ -434,15 +433,17 @@ list(){
 
 		if `ls -d1 ${SRC}-* &>/dev/null`;then
 			while read dir;do
+				true_kernel "${dir}"
 				if [ -f "${dir}/Makefile" ];then
-					true_kernel "${dir}"
 					SOURCES+="${dir} ${FULL_KERNEL}\n"
 				else
 					BROKEN_SOURCES+="${dir}\n"
 				fi
+			PACKAGES+="$(grep -m1 "dir ${dir}" ${PKGDB}/sys-kernel/*/CONTENTS | cut -d\/ -f5,6)  ${FULL_KERNEL}\n"
 			done <<< "$(ls -d1 --color=never ${SRC}-*)"
 			[ -n "${SOURCES}" ] && echo -e "\n${green}Sources:${restore}\n${SOURCES%\\n}"
 			[ -n "${BROKEN_SOURCES}" ] && echo -e "\n${green}Broken_sources:${restore}\n${BROKEN_SOURCES%\\n}"
+			[ -n "${PACKAGES}" ] && echo -e "\n${green}Packages:${restore}\n${PACKAGES%\\n}"
 		fi
 		[ -n "${ORPHAN_PKG}" ] && echo -e "${green}Unused_packages:${restore}\n `tr ' ' $'\n' <<< "${ORPHAN_PKG//=/}"`"
 		echo
@@ -462,7 +463,6 @@ available OPTIONS:
 CUSTOM can be one of:
 --ignore [TARGETS]:  Don't remove TARGETS.( or pass TARGETS in the /etc/kernel-cleaner.conf )
 --force  [TARGETS]:  Forcing remove TARGETS.
---force-deps:        Forcing remove initramfs/config/map for forced/auto TARGET kernel.
 
 TARGETS can be one of:
 [FILE]:    example '/boot/vmlinuz-X.Y.Z'
