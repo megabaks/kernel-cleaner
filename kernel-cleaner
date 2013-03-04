@@ -322,6 +322,7 @@ pkg_orphans(){
 			if [ -f "${dir}/Makefile" ];then
 				true_kernel "${dir}"
 				a_sources+="${dir} ${FULL_KERNEL}"$'\n'
+				unset FULL_KERNEL
 			fi
 		done <<< "$(ls -d1 --color=never ${SRC}-*)"
 	fi
