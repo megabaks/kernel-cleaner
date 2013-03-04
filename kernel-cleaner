@@ -437,6 +437,7 @@ list(){
 				true_kernel "${dir}"
 				if [ -f "${dir}/Makefile" ];then
 					SOURCES+="${dir} ${FULL_KERNEL}\n"
+					unset FULL_KERNEL
 				else
 					BROKEN_SOURCES+="${dir}\n"
 				fi
