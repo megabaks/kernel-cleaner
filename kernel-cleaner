@@ -1,6 +1,7 @@
 #!/bin/bash
 # Copyright megabaks
 # Distributed under the terms of the GNU General Public License v3 or later
+MY_VERSION='devel ---> 2013-03-08'
 ####### check openrc ###############
 [[ -f "/etc/init.d/functions.sh" ]] && . /etc/init.d/functions.sh
 ####### colors #####################
@@ -495,12 +496,15 @@ list(){
 ################ help ######################################################
 help_kc(){
   echo -e \
-"Usage: kernel-cleaner [OPTION] [CUSTOM] [TARGET] [TARGET]…
+"kernel-cleaner: ${MY_VERSION}
+
+Usage: kernel-cleaner [OPTION] [ [CUSTOM] [TARGET] ]
 available OPTIONS:
 --run/-r/r:      Check and remove broken kernels/sources/modules/initrams/configs/maps.
 --list/-l/l:     List of a founded kernels/sources/modules/initrams/configs/maps.
 --pretend/-p/p:  Check only. Nothing remove.
---help/-h/-?/h/:     This help.
+--version/-v/v:  Display version.
+--help/-h/-?/h/: This help.
 
 CUSTOM can be one of:
 --ignore [TARGETS]:  Don't remove TARGETS.( or pass TARGETS in the /etc/kernel-cleaner.conf )
@@ -549,6 +553,9 @@ case ${1} in
 	force "${*}";
 	status;
 	remove;
+	exit 0;;
+--version | version | -v | v )
+	echo -e "kernel-cleaner: ${contrast}${MY_VERSION}${restore}";
 	exit 0;;
 --help | help | -h | -? | h | * )
 	help_kc;

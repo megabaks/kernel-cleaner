@@ -1,0 +1,9 @@
+#!/bin/bash
+case "${1}" in
+	devel )
+	version="devel ---> $(stat -c %y kernel-cleaner | awk '{print $1}')";;
+	* )
+	version="${1}";;
+esac
+
+sed "s|MY_VERSION='.*'|MY_VERSION='${version}'|" -i /home/megabaks/kernel-cleaner/kernel-cleaner
