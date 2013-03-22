@@ -1,25 +1,19 @@
---- orig/kernel-cleaner/kernel-cleaner	2013-01-09 20:00:48.000000000 +0400
-+++ fixed/kernel-cleaner/kernel-cleaner	2013-01-09 20:03:10.000000000 +0400
-@@ -30,25 +30,22 @@
+--- kernel-cleaner/kernel-cleaner	2013-03-22 13:27:41.000000000 +0400
++++ kernel-cleaner-no_parallel/kernel-cleaner	2013-03-22 13:31:18.000000000 +0400
+@@ -28,20 +28,17 @@
+ ############################################################################
+ ################ init ######################################################
  init(){
- 	FILE_VERSION="$(file -v | grep -o "[[:digit:]].*")"
- 
 -	cores="$(awk '/cores/ {print $4}' /proc/cpuinfo | uniq)"
 -	threads="$(( ${cores} + 1 ))"
 -
  	SRC="/usr/src/linux"
  	PKGDB="/var/db/pkg"
  
- 	if [[ "${FILE_VERSION}" != "5.12" || -d /var/db/pkg/sys-apps/file-5.12-r1/ ]];then
- 		echo "Kernels....";
--		KERNELS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$9}')" ; eend 0 2>/dev/null
-+		KERNELS="$(file -F ' ' /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$9}')" ; eend 0 2>/dev/null
- 	else
- 		echo "Kernels....";
--		KERNELS="$(parallel -j${threads} "file -k -F ' '" ::: /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$18}')" ; eend 0 2>/dev/null
-+		KERNELS="$(file -k -F ' ' /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$18}')" ; eend 0 2>/dev/null
- 	fi
- 
+ 	echo "Kernels....";
+-	KERNELS="$(parallel -j${threads} "file -k" ::: /boot/* | sed 'N;s/:\n//' | grep "Linux.*version" |\
++	KERNELS="$(file -k /boot/* | sed 'N;s/:\n//' | grep "Linux.*version" |\
+ 			grep -oe "/boot/.*: " -oe "version .*" | sed -e 'N;s/\n//' -e 's|:||1'| awk '{print $1,$3}')" ; eend 0 2>/dev/null
  	echo "Initrams...";
 -	INITRAMS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/compressed data/ {print $1,$2}')" ; eend 0 2>/dev/null
 +	INITRAMS="$(file -F ' ' /boot/* 2>/dev/null | awk '/compressed data/ {print $1,$2}')" ; eend 0 2>/dev/null

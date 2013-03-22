@@ -1,7 +1,7 @@
 #!/bin/bash
 # Copyright megabaks
 # Distributed under the terms of the GNU General Public License v3 or later
-MY_VERSION='devel ---> 2013-03-08'
+MY_VERSION='2.4.7'
 ####### check openrc ###############
 [[ -f "/etc/init.d/functions.sh" ]] && . /etc/init.d/functions.sh
 ####### colors #####################
@@ -28,22 +28,15 @@ FORCE+=" $(sed -e "s|.*--force ||" -e "s| --.*||" -e "s| -.*||" <<< `echo "${*}"
 ############################################################################
 ################ init ######################################################
 init(){
-	FILE_VERSION="$(file -v | grep -o "[[:digit:]].*")"
-
 	cores="$(awk '/cores/ {print $4}' /proc/cpuinfo | uniq)"
 	threads="$(( ${cores} + 1 ))"
 
 	SRC="/usr/src/linux"
 	PKGDB="/var/db/pkg"
 
-	if [[ "${FILE_VERSION}" != "5.12" || -d /var/db/pkg/sys-apps/file-5.12-r1/ ]];then
-		echo "Kernels....";
-		KERNELS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$9}')" ; eend 0 2>/dev/null
-	else
-		echo "Kernels....";
-		KERNELS="$(parallel -j${threads} "file -k -F ' '" ::: /boot/* 2>/dev/null | awk '/Linux.*version/ {print $1,$18}')" ; eend 0 2>/dev/null
-	fi
-
+	echo "Kernels....";
+	KERNELS="$(parallel -j${threads} "file -k" ::: /boot/* | sed 'N;s/:\n//' | grep "Linux.*version" |\
+			grep -oe "/boot/.*: " -oe "version .*" | sed -e 'N;s/\n//' -e 's|:||1'| awk '{print $1,$3}')" ; eend 0 2>/dev/null
 	echo "Initrams...";
 	INITRAMS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/compressed data/ {print $1,$2}')" ; eend 0 2>/dev/null
 	echo "Configs....";
