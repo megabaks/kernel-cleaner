@@ -4,8 +4,7 @@
  ############################################################################
  ################ init ######################################################
  init(){
--	cores="$(awk '/cores/ {print $4}' /proc/cpuinfo | uniq)"
--	threads="$(( ${cores} + 1 ))"
+-	threads="$(( `grep -c "^processor" /proc/cpuinfo` + 1 ))"
 -
  	SRC="/usr/src/linux"
  	PKGDB="/var/db/pkg"
