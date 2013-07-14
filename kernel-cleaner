@@ -1,7 +1,7 @@
 #!/bin/bash
 # Copyright megabaks
 # Distributed under the terms of the GNU General Public License v3 or later
-MY_VERSION='devel ---> 2013-04-15'
+MY_VERSION='2.4.8'
 ####### check openrc ###############
 [[ -f "/etc/init.d/functions.sh" ]] && . /etc/init.d/functions.sh
 ####### colors #####################
@@ -368,17 +368,68 @@ pkg_orphans(){
 ############################################################################
 ################ ignore ####################################################
 ignore(){
-	for ignor in ${FULL_IGNORE} $IGNORED;do
-		if [[ -f "${ignor}" || -d "${ignor}" ]] ;then
-			echo -e "${green}Ignoring:${restore}\t${ignor}"
-			[[ -f "${ignor}" ]] && REMOVE_FILES="${REMOVE_FILES/"${ignor}"/}"
-			[[ -d "${ignor}" ]] && REMOVE_DIRS="${REMOVE_DIRS/"${ignor}"/}"
-			[[ -d "${ignor}" ]] && REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${ignor}"/}"
+	if `ls -d1 ${SRC}-* &>/dev/null`;then
+		while read dir;do
+			true_kernel "${dir}"
+			local_version "${FULL_KERNEL}"
+			if [[ -n "${LOCALVERSION}" ]];then
+				FULL_KERNEL="${FULL_KERNEL}${LOCALVERSION}"
+			fi
+			if [[ -f "${dir}/Makefile" ]];then
+				SOURCES+="${dir} ${FULL_KERNEL}\n"
+			else
+				BROKEN_SOURCES+="${dir}\n"
+			fi
+		PACKAGES+="$(grep -m1 "dir ${dir}" ${PKGDB}/sys-kernel/*/CONTENTS | cut -d\/ -f5,6)  ${FULL_KERNEL}\n"
+		unset FULL_KERNEL LOCALVERSION
+		done <<< "$(ls -d1 --color=never ${SRC}-*)"
+	fi
+	all_versions="$(echo -e "${KERNELS}\n${INITRAMS}\n${CONFIGS}\n${SOURCES}\n${BROKEN_SOURCES}\n${PACKAGES}" | awk '{print $2}' | sort -u)"
+	all_packages="$(echo -e "${PACKAGES}" | awk '{print $1}')"
+	for ignor in ${FULL_IGNORE} ${IGNORED};do
+		if [[ -f "${ignor}" ]] ;then
+			echo -e "${green}Ignoring file:${restore}\t${ignor}"
+			REMOVE_FILES="${REMOVE_FILES/"${ignor}"/}"
+		elif [[ -d "${ignor}" ]];then
+			echo -e "${green}Ignoring directory:${restore}\t${ignor}"
+			REMOVE_DIRS="${REMOVE_DIRS/"${ignor}"/}"
+			REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${ignor}"/}"
+		elif grep -q "^${ignor} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/${ignore}" ]];then
+			echo -e "${green}Ignoring package:${restore}\t${ignor}"
+			ORPHAN_PKG="${ORPHAN_PKG/"${ignor}"/}"
+			pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/${ignor}/CONTENTS" | awk '{print $2}')"
+			echo -e "${green}Ignoring directory:${restore}\t${pkg_src}"
+			REMOVE_DIRS="${REMOVE_DIRS/"${pkg_src}"/}"
+		elif grep -q "^sys-kernel/${ignor} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/sys-kernel/${ignore}" ]];then
+			echo -e "${green}Ignoring package:${restore}\tsys-kernel/${ignor}"
+			ORPHAN_PKG="${ORPHAN_PKG/"sys-kernel/${ignor}"/}"
+			pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/sys-kernel/${ignor}/CONTENTS" | awk '{print $2}')"
+			echo -e "${green}Ignoring directory:${restore}\t${pkg_src}"
+			REMOVE_DIRS="${REMOVE_DIRS/"${pkg_src}"/}"
+		elif grep -q "^${ignor}$" <<< "${all_versions}";then
+			all_ignored_trash="$(echo -e "${KERNELS}\n${INITRAMS}\n${CONFIGS}\n${SOURCES}\n${BROKEN_SOURCES}\n${PACKAGES}" | awk /" ${ignor}"/'{print $1}')"
+			for trash in ${all_ignored_trash};do
+				if [[ -f "${trash}" ]] ;then
+					echo -e "${green}Ignoring file:${restore}\t${trash}"
+					REMOVE_FILES="${REMOVE_FILES/"${trash}"/}"
+				elif [[ -d "${trash}" ]];then
+					echo -e "${green}Ignoring directory:${restore}\t${trash}"
+					REMOVE_DIRS="${REMOVE_DIRS/"${trash}"/}"
+					REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${trash}"/}"
+				elif grep -q "^${trash} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/${trash}" ]];then
+					echo -e "${green}Ignoring package:${restore}\t${trash}"
+					ORPHAN_PKG="${ORPHAN_PKG/"${trash}"/}"
+					pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/${trash}/CONTENTS" | awk '{print $2}')"
+					echo -e "${green}Ignoring directory:${restore}\t${pkg_src}"
+					REMOVE_DIRS="${REMOVE_DIRS/"${pkg_src}"/}"
+				fi
+			done
 		else
-			echo -e "${red}Not found:${restore}\t${ignor}"
+			echo -e "\n${green}>>> ${red}${ignor} ${green}<<<${restore} o_O???\n"
 		fi
 	done
 }
+
 ############################################################################
 ################ force #####################################################
 force(){
