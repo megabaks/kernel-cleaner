@@ -396,13 +396,13 @@ ignore(){
 			REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${ignor}"/}"
 		elif grep -q "^${ignor} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/${ignore}" ]];then
 			echo -e "${green}Ignoring package:${restore}\t${ignor}"
-			ORPHAN_PKG="${ORPHAN_PKG/"${ignor}"/}"
+			ORPHAN_PKG="${ORPHAN_PKG/" =${ignor}"/}"
 			pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/${ignor}/CONTENTS" | awk '{print $2}')"
 			echo -e "${green}Ignoring directory:${restore}\t${pkg_src}"
 			REMOVE_DIRS="${REMOVE_DIRS/"${pkg_src}"/}"
 		elif grep -q "^sys-kernel/${ignor} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/sys-kernel/${ignore}" ]];then
 			echo -e "${green}Ignoring package:${restore}\tsys-kernel/${ignor}"
-			ORPHAN_PKG="${ORPHAN_PKG/"sys-kernel/${ignor}"/}"
+			ORPHAN_PKG="${ORPHAN_PKG/" =sys-kernel/${ignor}"/}"
 			pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/sys-kernel/${ignor}/CONTENTS" | awk '{print $2}')"
 			echo -e "${green}Ignoring directory:${restore}\t${pkg_src}"
 			REMOVE_DIRS="${REMOVE_DIRS/"${pkg_src}"/}"
@@ -418,7 +418,7 @@ ignore(){
 					REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${trash}"/}"
 				elif grep -q "^${trash} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/${trash}" ]];then
 					echo -e "${green}Ignoring package:${restore}\t${trash}"
-					ORPHAN_PKG="${ORPHAN_PKG/"${trash}"/}"
+					ORPHAN_PKG="${ORPHAN_PKG/" =${trash}"/}"
 					pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/${trash}/CONTENTS" | awk '{print $2}')"
 					echo -e "${green}Ignoring directory:${restore}\t${pkg_src}"
 					REMOVE_DIRS="${REMOVE_DIRS/"${pkg_src}"/}"
