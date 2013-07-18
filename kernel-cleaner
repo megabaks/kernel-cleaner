@@ -50,6 +50,12 @@ init(){
 	done <<< "${CONFIGS_NOLOCAL}"
 	echo "Maps.......";
 	ALL_MAPS="$(ls -1 --color=never /boot/System.map-* 2>/dev/null)" ; eend 0 2>/dev/null
+	if ls -d1 /lib/modules/* &>/dev/null;then
+		mod_dirs="$(ls -d1 --color=never /lib/modules/*)"
+		for i in ${mod_dirs};do
+			MODULES+="${i} ${i##*/}"
+		done
+	fi
 }
 ############################################################################
 ################ kernel path and real name #################################
@@ -366,71 +372,111 @@ pkg_orphans(){
 	fi
 }
 ############################################################################
+################ ignore/force trash ########################################
+version_ignore(){
+	all_trash="$(echo -e "${KERNELS}\n${INITRAMS}\n${CONFIGS}\n${SOURCES}\n${BROKEN_SOURCES}\n${PACKAGES}\n${MODULES}" | grep " ${1}$" | awk '{print $1}')"
+	for trash in ${all_trash};do
+		if [[ -f "${trash}" ]];then
+			if ! grep -q "^${trash}$" <<< "${ALREADY_IGNORED}";then
+				echo -e "${green}Ignoring file:${restore}\t\t${trash}"
+				REMOVE_FILES="${REMOVE_FILES/"${trash}"/}"
+				ALREADY_IGNORED+="${trash}"$'\n'
+			fi
+		elif [[ -d "${trash}" ]];then
+			if ! grep -q "^${trash}$" <<< "${ALREADY_IGNORED}";then
+				echo -e "${green}Ignoring directory:${restore}\t${trash}"
+				REMOVE_DIRS="${REMOVE_DIRS/"${trash}"/}"
+				REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${trash}"/}"
+				ALREADY_IGNORED+="${trash}"$'\n'
+			fi
+		elif grep -q "^${trash} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/${trash}" ]];then
+			if ! grep -q "^${trash}$" <<< "${ALREADY_IGNORED}";then
+				echo -e "${green}Ignoring package:${restore}\t${trash}"
+				ORPHAN_PKG="${ORPHAN_PKG/" =${trash}"/}"
+				ALREADY_IGNORED+="${trash}"$'\n'
+			fi
+			pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/${trash}/CONTENTS" | awk '{print $2}')"
+			if ! grep -q "^${pkg_src}$" <<< "${ALREADY_IGNORED}";then
+				echo -e "${green}Ignoring directory:${restore}\t${pkg_src}"
+				REMOVE_DIRS="${REMOVE_DIRS/"${pkg_src}"/}"
+				ALREADY_IGNORED+="${pkg_src}"$'\n'
+			fi
+		fi
+	done
+}
+all_pkgs(){
+	if [[ -z "${PACKAGES}" ]];then
+		if `ls -d1 ${SRC}-* &>/dev/null`;then
+			while read dir;do
+				true_kernel "${dir}"
+				local_version "${FULL_KERNEL}"
+				if [[ -n "${LOCALVERSION}" ]];then
+					FULL_KERNEL="${FULL_KERNEL}${LOCALVERSION}"
+				fi
+				if [[ -f "${dir}/Makefile" ]];then
+					SOURCES+="${dir} ${FULL_KERNEL}"$'\n'
+				else
+					BROKEN_SOURCES+="${dir}"$'\n'
+				fi
+			PACKAGES+="$(grep -m1 "dir ${dir}" ${PKGDB}/sys-kernel/*/CONTENTS | cut -d\/ -f5,6)  ${FULL_KERNEL}"$'\n'
+			unset FULL_KERNEL LOCALVERSION
+			done <<< "$(ls -d1 --color=never ${SRC}-*)"
+		fi
+		all_versions="$(echo -e "${KERNELS}\n${INITRAMS}\n${CONFIGS}\n${SOURCES}\n${BROKEN_SOURCES}\n${PACKAGES}\n${MODULES}" | awk '{print $2}' | sort -u)"
+	fi
+}
 ################ ignore ####################################################
 ignore(){
-	if `ls -d1 ${SRC}-* &>/dev/null`;then
-		while read dir;do
-			true_kernel "${dir}"
-			local_version "${FULL_KERNEL}"
-			if [[ -n "${LOCALVERSION}" ]];then
-				FULL_KERNEL="${FULL_KERNEL}${LOCALVERSION}"
-			fi
-			if [[ -f "${dir}/Makefile" ]];then
-				SOURCES+="${dir} ${FULL_KERNEL}\n"
-			else
-				BROKEN_SOURCES+="${dir}\n"
-			fi
-		PACKAGES+="$(grep -m1 "dir ${dir}" ${PKGDB}/sys-kernel/*/CONTENTS | cut -d\/ -f5,6)  ${FULL_KERNEL}\n"
-		unset FULL_KERNEL LOCALVERSION
-		done <<< "$(ls -d1 --color=never ${SRC}-*)"
-	fi
-	all_versions="$(echo -e "${KERNELS}\n${INITRAMS}\n${CONFIGS}\n${SOURCES}\n${BROKEN_SOURCES}\n${PACKAGES}" | awk '{print $2}' | sort -u)"
-	all_packages="$(echo -e "${PACKAGES}" | awk '{print $1}')"
+	all_pkgs;
 	for ignor in ${FULL_IGNORE} ${IGNORED};do
 		if [[ -f "${ignor}" ]] ;then
-			echo -e "${green}Ignoring file:${restore}\t${ignor}"
-			REMOVE_FILES="${REMOVE_FILES/"${ignor}"/}"
+			if ! grep -q "^${ignor}$" <<< "${ALREADY_IGNORED}";then
+				echo -e "${green}Ignoring file:${restore}\t${ignor}"
+				REMOVE_FILES="${REMOVE_FILES/"${ignor}"/}"
+				ALREADY_IGNORED+="${ignor}"$'\n'
+			fi
 		elif [[ -d "${ignor}" ]];then
-			echo -e "${green}Ignoring directory:${restore}\t${ignor}"
-			REMOVE_DIRS="${REMOVE_DIRS/"${ignor}"/}"
-			REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${ignor}"/}"
-		elif grep -q "^${ignor} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/${ignore}" ]];then
-			echo -e "${green}Ignoring package:${restore}\t${ignor}"
-			ORPHAN_PKG="${ORPHAN_PKG/" =${ignor}"/}"
+			if ! grep -q "^${ignor}$" <<< "${ALREADY_IGNORED}";then
+				echo -e "${green}Ignoring directory:${restore}\t${ignor}"
+				REMOVE_DIRS="${REMOVE_DIRS/"${ignor}"/}"
+				REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${ignor}"/}"
+				ALREADY_IGNORED+="${ignor}"$'\n'
+			fi
+		elif grep -q "^${ignor} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/${ignor}" ]];then
+			if ! grep -q "^${ignor}$" <<< "${ALREADY_IGNORED}";then
+				echo -e "${green}Ignoring package:${restore}\t${ignor}"
+				ORPHAN_PKG="${ORPHAN_PKG/" =${ignor}"/}"
+				ALREADY_IGNORED+="${ignor}"$'\n'
+			fi
 			pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/${ignor}/CONTENTS" | awk '{print $2}')"
-			echo -e "${green}Ignoring directory:${restore}\t${pkg_src}"
-			REMOVE_DIRS="${REMOVE_DIRS/"${pkg_src}"/}"
-		elif grep -q "^sys-kernel/${ignor} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/sys-kernel/${ignore}" ]];then
-			echo -e "${green}Ignoring package:${restore}\tsys-kernel/${ignor}"
-			ORPHAN_PKG="${ORPHAN_PKG/" =sys-kernel/${ignor}"/}"
+			pkg_ver="$(grep "^${ignor} " <<< "${PACKAGES}" | awk '{print $2}')"
+			if ! grep -q "^${pkg_src}$" <<< "${ALREADY_IGNORED}";then
+				echo -e "${green}Ignoring directory:${restore}\t${pkg_src}"
+				REMOVE_DIRS="${REMOVE_DIRS/"${pkg_src}"/}"
+				ALREADY_IGNORED+="${pkg_src}"$'\n'
+			fi
+			version_ignore "${pkg_ver}"
+		elif grep -q "^sys-kernel/${ignor} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/sys-kernel/${ignor}" ]];then
+			if ! grep -q "^sys-kernel/${ignor}$" <<< "${ALREADY_IGNORED}";then
+				echo -e "${green}Ignoring package:${restore}\tsys-kernel/${ignor}"
+				ORPHAN_PKG="${ORPHAN_PKG/" =sys-kernel/${ignor}"/}"
+				ALREADY_IGNORED+="sys-kernel/${ignor}"$'\n'
+			fi
 			pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/sys-kernel/${ignor}/CONTENTS" | awk '{print $2}')"
-			echo -e "${green}Ignoring directory:${restore}\t${pkg_src}"
-			REMOVE_DIRS="${REMOVE_DIRS/"${pkg_src}"/}"
+			pkg_ver="$(grep "^sys-kernel/${ignor} " <<< "${PACKAGES}" | awk '{print $2}')"
+			if ! grep -q "^${pkg_src}$" <<< "${ALREADY_IGNORED}";then
+				echo -e "${green}Ignoring directory:${restore}\t${pkg_src}"
+				REMOVE_DIRS="${REMOVE_DIRS/"${pkg_src}"/}"
+				ALREADY_IGNORED+="${pkg_src}"$'\n'
+			fi
+			version_ignore "${pkg_ver}"
 		elif grep -q "^${ignor}$" <<< "${all_versions}";then
-			all_ignored_trash="$(echo -e "${KERNELS}\n${INITRAMS}\n${CONFIGS}\n${SOURCES}\n${BROKEN_SOURCES}\n${PACKAGES}" | awk /" ${ignor}"/'{print $1}')"
-			for trash in ${all_ignored_trash};do
-				if [[ -f "${trash}" ]] ;then
-					echo -e "${green}Ignoring file:${restore}\t${trash}"
-					REMOVE_FILES="${REMOVE_FILES/"${trash}"/}"
-				elif [[ -d "${trash}" ]];then
-					echo -e "${green}Ignoring directory:${restore}\t${trash}"
-					REMOVE_DIRS="${REMOVE_DIRS/"${trash}"/}"
-					REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${trash}"/}"
-				elif grep -q "^${trash} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/${trash}" ]];then
-					echo -e "${green}Ignoring package:${restore}\t${trash}"
-					ORPHAN_PKG="${ORPHAN_PKG/" =${trash}"/}"
-					pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/${trash}/CONTENTS" | awk '{print $2}')"
-					echo -e "${green}Ignoring directory:${restore}\t${pkg_src}"
-					REMOVE_DIRS="${REMOVE_DIRS/"${pkg_src}"/}"
-				fi
-			done
+			version_ignore "${ignor}"
 		else
 			echo -e "\n${green}>>> ${red}${ignor} ${green}<<<${restore} o_O???\n"
 		fi
 	done
 }
-
-############################################################################
 ################ force #####################################################
 force(){
 	for force in ${FORCE};do
@@ -510,7 +556,7 @@ list(){
 		[[ -n "${INITRAMS}" ]] && echo -e "${green}Initrams:${restore}\n" "${INITRAMS_FULL}"
 		[[ -n "${CONFIGS}" ]] && echo -e "${green}Configs:${restore}\n" "${CONFIGS}"
 		[[ -n "${ALL_MAPS}" ]] && echo -e "${green}Maps:${restore}\n" "${ALL_MAPS}"
-		ls -d1 /lib/modules/* &>/dev/null && echo -e "\n${green}Modules:${restore}\n `ls -d1 --color=never /lib/modules/*`"
+		[[ -n "${MODULES}" ]] && echo -e "${green}Modules:${restore}\n" "${MODULES}"
 
 		if `ls -d1 ${SRC}-* &>/dev/null`;then
 			while read dir;do
