@@ -505,7 +505,7 @@ ignore(){
 		elif grep -q "^${ignor}$" <<< "${all_versions}";then
 			version_ignore "${ignor}"
 		else
-			echo -e "\n${green}>>> ${red}${ignor} ${green}<<<${restore} o_O???\n"
+			[[ "${ignor}" != "unknown" ]] && echo -e "\n${green}>>> ${red}${ignor} ${green}<<<${restore} o_O???\n"
 		fi
 	done
 	unset ALREADY_IGNORED
