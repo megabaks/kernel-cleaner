@@ -596,10 +596,18 @@ status(){
 ################ remove ####################################################
 remove(){
 	if [[ -n "${REMOVE_FILES}" || -n "${REMOVE_DIRS}" || -n "${REMOVE_MOD_DIRS}" || -n "${PKG}" ]];then
-		echo -ne "${green}Calculating space...${restore}"
-		total_space="$(du -shc ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } ${UNUSED_SOURCES//\\n/ } | tail -n1 | awk '{print $1}')" && eend 0 2>/dev/null
 		echo -ne "${green}Counting files...${restore}"
 		total_files="$(find ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } ${UNUSED_SOURCES//\\n/ } -type f | wc -l )" && eend 0 2>/dev/null
+		tput sc
+		echo -ne "                                         "
+		tput rc
+		echo -e "${green}total files:${restore} ${total_files}"
+		echo -ne "${green}Calculating space...${restore}"
+		total_space="$(du -shc ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } ${UNUSED_SOURCES//\\n/ } | tail -n1 | awk '{print $1}')" && eend 0 2>/dev/null
+		tput sc
+		echo -ne "                                         "
+		tput rc
+		echo -e "${green}total space:${restore} ${total_space}"
 		echo -ne "${contrast}Would you like to remove this trash?${restore} [${green}Yes${restore}/${red}No${restore}] ";
 		while read x;do
 			case ${x} in
