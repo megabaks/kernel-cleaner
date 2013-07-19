@@ -386,6 +386,7 @@ version_ignore(){
 			if ! grep -q "^${trash}$" <<< "${ALREADY_IGNORED}";then
 				echo -e "${green}Ignoring directory:${restore}\t${trash}"
 				REMOVE_DIRS="${REMOVE_DIRS/"${trash}"/}"
+				UNUSED_SOURCES="${UNUSED_SOURCES/"${trash}"/}"
 				REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${trash}"/}"
 				ALREADY_IGNORED+="${trash}"$'\n'
 			fi
@@ -471,6 +472,7 @@ ignore(){
 			if ! grep -q "^${ignor}$" <<< "${ALREADY_IGNORED}";then
 				echo -e "${green}Ignoring directory:${restore}\t${ignor}"
 				REMOVE_DIRS="${REMOVE_DIRS/"${ignor}"/}"
+				UNUSED_SOURCES="${UNUSED_SOURCES/"${trash}"/}"
 				REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${ignor}"/}"
 				ALREADY_IGNORED+="${ignor}"$'\n'
 			fi
