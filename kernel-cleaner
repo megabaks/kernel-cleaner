@@ -1,7 +1,7 @@
 #!/bin/bash
 # Copyright megabaks
 # Distributed under the terms of the GNU General Public License v3 or later
-MY_VERSION='devel ---> 2013-07-19'
+MY_VERSION='devel ---> 2013-07-20'
 ############################################################################
 ################ check openrc ##############################################
 [[ -f "/etc/init.d/functions.sh" ]] && . /etc/init.d/functions.sh
@@ -26,7 +26,7 @@ fi
 ############################################################################
 ################ ignore/force workaround ###################################
 IGNORE="${IGNORE} "
-FULL_IGNORE="$IGNORE"
+FULL_IGNORE="$IGNORE unknown"
 FULL_IGNORE+=" $(sed -e "s|.*--ignore ||" -e "s| --.*||" -e "s| -.*||"<<< `echo "${*}" | grep '\--ignore' `)"
 FULL_IGNORE="$(echo ${FULL_IGNORE} | tr " " "\n" | uniq | tr "\n" " ")"
 FORCE+=" $(sed -e "s|.*--force ||" -e "s| --.*||" -e "s| -.*||" <<< `echo "${*}" | grep '\--force' `)"
@@ -217,22 +217,18 @@ check_boot(){
 ################ real_check ################################################
 real_check(){
 	if [[ ! -f "${SRC}-${KERNEL}/Makefile" && ! -d "/lib/modules/${version}" ]];then
-		REMOVE_FILES="${REMOVE_FILES}
-${file}"
-
+		REMOVE_FILES="${REMOVE_FILES}"$'\n'"${file}"
 		#### initrams ####
 		while read ram_file ram_ver;do
 			if [[ "${version}" == "${ram_ver}" ]];then
-				REMOVE_FILES="${REMOVE_FILES}
-${ram_file}"
+				REMOVE_FILES="${REMOVE_FILES}"$'\n'"${ram_file}"
 			fi
 		done <<< "${INITRAMS_FULL}"
 
 		#### configs #####
 		while read conf_file conf_version;do
 			if [[ "${version}" == "${conf_version}" ]];then
-				REMOVE_FILES="${REMOVE_FILES}
-${conf_file}"
+				REMOVE_FILES="${REMOVE_FILES}"$'\n'"${conf_file}"
 			fi
 		done <<< "${CONFIGS}"
 
@@ -241,15 +237,13 @@ ${conf_file}"
 			trash="${map_file%%${version}}"
 			map_version="${map_file##${trash}}"
 			if [[ "${version}" == "${map_version}" ]];then
-				REMOVE_FILES="${REMOVE_FILES}
-${map_file}"
+				REMOVE_FILES="${REMOVE_FILES}"$'\n'"${map_file}"
 			fi
 		done <<< "${ALL_MAPS}"
 
 		#### modules #####
 		if [[ -d "/lib/modules/${version}" ]];then
-			REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
-/lib/modules/${version}"
+			REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}"$'\n'"/lib/modules/${version}"
 		fi
 	fi
 }
@@ -263,9 +257,15 @@ initrams(){
 			[[ "${compressor}" == "lzop" ]]  && decompressor="lzop -c"
 			[[ "${compressor}" == "XZ" ]]    && decompressor="xzcat"
 			[[ "${compressor}" == "LZMA" ]]  && decompressor="lzcat"
-			initram_ver="$( "${decompressor}" "${initram}" | strings | awk '/^vermagic=[[:digit:]]/ {print $1}' | sort -u | sed 's|vermagic=||')"
-			INITRAMS_FULL="${INITRAMS_FULL}
-${initram} ${initram_ver}"
+			initram_ver="$("${decompressor}" "${initram}" | strings | awk '/^vermagic=[[:digit:]]/ {print $1}' | sort -u | sed 's|vermagic=||')"
+			if [[ -z "${initram_ver}" ]];then
+				initram_ver="$("${decompressor}" "${initram}" | strings | grep -o "modules/[[:digit:]].*" | grep -v "modules\." | sed 's|.*/||g')"
+			fi
+			if [[ -z "${initram_ver}" ]];then
+				INITRAMS_FULL="${INITRAMS_FULL}"$'\n'"${initram} unknown"
+			else
+				INITRAMS_FULL="${INITRAMS_FULL}"$'\n'"${initram} ${initram_ver}"
+			fi
 		fi
 	done <<< "${INITRAMS}"
 }
@@ -279,8 +279,7 @@ initrams_orphans(){
 		done <<< "${INITRAMS_FULL}"
 	done <<< "${KERNELS}"
 	ORPHANS="$( echo -e "${ORPHANS}" | awk '{print $1}' )"
-	REMOVE_FILES="${REMOVE_FILES}
-${ORPHANS}"
+	REMOVE_FILES="${REMOVE_FILES}"$'\n'"${ORPHANS}"
 }
 ############################################################################
 ################ configs ###################################################
@@ -294,8 +293,7 @@ orphan_configs(){
 		done <<< "${KERNELS}"
 	done <<< "${CONFIGS}"
 	CONFIGS_ORPHANS="$( awk '{print $1}' <<< "${CONFIGS_ORPHANS}" )"
-	REMOVE_FILES="${REMOVE_FILES}
-${CONFIGS_ORPHANS}"
+	REMOVE_FILES="${REMOVE_FILES}"$'\n'"${CONFIGS_ORPHANS}"
 }
 ############################################################################
 ################ System.map ################################################
@@ -311,8 +309,7 @@ orphan_maps(){
 		done <<< "${KERNELS}"
 	done <<< "${ALL_MAPS}"
 	MAPS_ORPHANS="$( awk '{print $1}' <<< "${MAPS_ORPHANS}" )"
-	REMOVE_FILES="${REMOVE_FILES}
-${MAPS_ORPHANS}"
+	REMOVE_FILES="${REMOVE_FILES}"$'\n'"${MAPS_ORPHANS}"
 }
 ############################################################################
 ################ modules ###################################################
@@ -329,11 +326,9 @@ check_mod(){
 		MOD_DIRS="${MOD_DIRS/"${moddir}"/}"
 	done
 	while read md;do
-		[[ -n "${md}" && -d "/lib/modules/${md}" ]] && TRASH_MOD_DIRS="${TRASH_MOD_DIRS}
-/lib/modules/${md}"
+		[[ -n "${md}" && -d "/lib/modules/${md}" ]] && TRASH_MOD_DIRS="${TRASH_MOD_DIRS}"$'\n'"/lib/modules/${md}"
 	done <<< "${MOD_DIRS}"
-	REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}
-${TRASH_MOD_DIRS}"
+	REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS}"$'\n'"${TRASH_MOD_DIRS}"
 }
 ############################################################################
 ################ sources ###################################################
@@ -341,11 +336,9 @@ check_src(){
 	for src_dir in `ls -d1 --color=never ${SRC}-* 2>/dev/null`;do
 		parent_pkg="$(grep -m1 "dir ${src_dir}" ${PKGDB}/sys-kernel/*/CONTENTS | cut -d\/ -f5,6)"
 		if grep -q "${parent_pkg}" <<< "${ORPHAN_PKG}";then
-			REMOVE_DIRS="${REMOVE_DIRS}
-${src_dir}"
+			REMOVE_DIRS="${REMOVE_DIRS}"$'\n'"${src_dir}"
 		elif [[ ! -f "${src_dir}/Makefile" ]];then
-			REMOVE_DIRS="${REMOVE_DIRS}
-${src_dir}"
+			REMOVE_DIRS="${REMOVE_DIRS}"$'\n'"${src_dir}"
 		fi
 	done
 }
