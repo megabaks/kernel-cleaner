@@ -600,12 +600,12 @@ remove(){
 	if [[ -n "${REMOVE_FILES}" || -n "${REMOVE_DIRS}" || -n "${REMOVE_MOD_DIRS}" || -n "${PKG}" ]];then
 		tput sc
 		echo -ne "${green}Counting files...${restore}"
-		total_files="$(find ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } ${UNUSED_SOURCES//\\n/ } -type f | wc -l )"
+		total_files="$(find ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } -type f | wc -l )"
 		tput rc
 		echo -e "${green}total files:${restore} ${total_files}           "
 		tput sc
 		echo -ne "${green}Calculating space...${restore}"
-		total_space="$(du -shc ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } ${UNUSED_SOURCES//\\n/ } | tail -n1 | awk '{print $1}')"
+		total_space="$(du -shc ${REMOVE_FILES//\\n/ } ${REMOVE_DIRS//\\n/ } ${REMOVE_MOD_DIRS//\\n/ } | tail -n1 | awk '{print $1}')"
 		tput rc
 		echo -e "${green}total space:${restore} ${total_space}           "
 		echo -ne "${contrast}Would you like to remove this trash?${restore} [${green}Yes${restore}/${red}No${restore}] ";
