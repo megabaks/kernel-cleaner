@@ -1,30 +1,35 @@
 #!/bin/bash
 # Copyright megabaks
 # Distributed under the terms of the GNU General Public License v3 or later
-MY_VERSION='devel ---> 2013-07-18'
-####### check openrc ###############
+MY_VERSION='devel ---> 2013-07-19'
+############################################################################
+################ check openrc ##############################################
 [[ -f "/etc/init.d/functions.sh" ]] && . /etc/init.d/functions.sh
-####### colors #####################
+############################################################################
+################ colors ####################################################
 green="\033[01;32m"
 red="\033[01;31m"
 restore="\033[00m"
 contrast="\033[1m"
-####### check /boot ################
-if grep "\<boot\>" /etc/fstab | grep -qv \#;then
-	if ! `grep -q "\<boot\>" /etc/mtab`;then
+############################################################################
+################ check /boot ###############################################
+if grep " /boot " /etc/fstab | grep -qv \#;then
+	if ! `grep -q " /boot " /proc/mounts`;then
 		echo -e "\n${green}/boot${restore} ${red}is NOT mounted${restore}!!!\n"
 		exit 1
 	fi
 fi
-####### ignore/force workaround ####
+############################################################################
+################ ignore/force workaround ###################################
 IGNORE="${IGNORE} "
-#### config ########################
-[[ -z "${CONFIG}" ]] && CONFIG="/etc/kernel-cleaner.conf"
-[[ -f "${CONFIG}" ]] && . "${CONFIG}"
 FULL_IGNORE="$IGNORE"
 FULL_IGNORE+=" $(sed -e "s|.*--ignore ||" -e "s| --.*||" -e "s| -.*||"<<< `echo "${*}" | grep '\--ignore' `)"
 FULL_IGNORE="$(echo ${FULL_IGNORE} | tr " " "\n" | uniq | tr "\n" " ")"
 FORCE+=" $(sed -e "s|.*--force ||" -e "s| --.*||" -e "s| -.*||" <<< `echo "${*}" | grep '\--force' `)"
+############################################################################
+################ config ####################################################
+[[ -z "${CONFIG}" ]] && CONFIG="/etc/kernel-cleaner.conf"
+[[ -f "${CONFIG}" ]] && . "${CONFIG}"
 ############################################################################
 ################ init ######################################################
 init(){
@@ -374,7 +379,8 @@ pkg_orphans(){
 ############################################################################
 ################ ignore/force trash ########################################
 version_ignore(){
-	all_trash="$(echo -e "${KERNELS}\n${INITRAMS}\n${CONFIGS}\n${SOURCES}\n${BROKEN_SOURCES}\n${PACKAGES}\n${MODULES}" | grep " ${1}$" | awk '{print $1}')"
+	all_trash="$(echo -e "${KERNELS}\n${INITRAMS}\n${CONFIGS}\n${SOURCES}\n${BROKEN_SOURCES}\n${PACKAGES}\n${MODULES}"\
+	| grep " ${1}$" | awk '{print $1}')"
 	for trash in ${all_trash};do
 		if [[ -f "${trash}" ]];then
 			if ! grep -q "^${trash}$" <<< "${ALREADY_IGNORED}";then
@@ -400,6 +406,38 @@ version_ignore(){
 				echo -e "${green}Ignoring directory:${restore}\t${pkg_src}"
 				REMOVE_DIRS="${REMOVE_DIRS/"${pkg_src}"/}"
 				ALREADY_IGNORED+="${pkg_src}"$'\n'
+			fi
+		fi
+	done
+}
+version_force(){
+	all_trash="$(echo -e "${KERNELS}\n${INITRAMS}\n${CONFIGS}\n${SOURCES}\n${BROKEN_SOURCES}\n${PACKAGES}\n${MODULES}"\
+	| grep " ${1}$" | awk '{print $1}')"
+	for trash in ${all_trash};do
+		if [[ -f "${trash}" ]];then
+			if ! grep -q "^${trash}$" <<< "${ALREADY_FORCED}";then
+				echo -e "${green}Forcing file:${restore}\t\t${trash}"
+				REMOVE_FILES+=$'\n'"${trash}"
+				ALREADY_FORCED+="${trash}"$'\n'
+			fi
+		elif [[ -d "${trash}" ]];then
+			if ! grep -q "^${trash}$" <<< "${ALREADY_FORCED}";then
+				echo -e "${green}Forcing directory:${restore}\t${trash}"
+				REMOVE_DIRS+=$'\n'"${trash}"
+				REMOVE_MOD_DIRS+=$'\n'"${trash}"
+				ALREADY_FORCED+="${trash}"$'\n'
+			fi
+		elif grep -q "^${trash} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/${trash}" ]];then
+			if ! grep -q "^${trash}$" <<< "${ALREADY_FORCED}";then
+				echo -e "${green}Forcing package:${restore}\t${trash}"
+				ORPHAN_PKG+=$'\n'" =${trash}"
+				ALREADY_FORCED+="${trash}"$'\n'
+			fi
+			pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/${trash}/CONTENTS" | awk '{print $2}')"
+			if ! grep -q "^${pkg_src}$" <<< "${ALREADY_FORCED}";then
+				echo -e "${green}Forcing directory:${restore}\t${pkg_src}"
+				REMOVE_DIRS+=$'\n'"${pkg_src}"
+				ALREADY_FORCED+="${pkg_src}"$'\n'
 			fi
 		fi
 	done
@@ -476,20 +514,60 @@ ignore(){
 			echo -e "\n${green}>>> ${red}${ignor} ${green}<<<${restore} o_O???\n"
 		fi
 	done
+	unset ALREADY_IGNORED
 }
 ################ force #####################################################
 force(){
+	all_pkgs;
 	for force in ${FORCE};do
-		if [[ -f "${force}" || -d "${force}" ]] ;then
-			echo -e "${green}Forcing remove:${restore}\t${force}"
-			[[ -f "${force}" ]] && REMOVE_FILES="${REMOVE_FILES}
-${force}"
-			[[ -d "${force}" ]] && REMOVE_DIRS="${REMOVE_DIRS}
-${force}"
+		if [[ -f "${force}" ]] ;then
+			if ! grep -q "^${force}$" <<< "${ALREADY_FORCED}";then
+				echo -e "${green}Forcing file:${restore}\t\t${trash}"
+				REMOVE_FILES+=$'\n'"${trash}"
+				ALREADY_FORCED+="${trash}"$'\n'
+			fi
+		elif [[ -d "${force}" ]];then
+			if ! grep -q "^${force}$" <<< "${ALREADY_FORCED}";then
+				echo -e "${green}Forcing directory:${restore}\t${trash}"
+				REMOVE_DIRS+=$'\n'"${trash}"
+				REMOVE_MOD_DIRS+=$'\n'"${trash}"
+				ALREADY_FORCED+="${trash}"$'\n'
+			fi
+		elif grep -q "^${force} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/${force}" ]];then
+			if ! grep -q "^${force}$" <<< "${ALREADY_FORCED}";then
+				echo -e "${green}Forcing package:${restore}\t${trash}"
+				ORPHAN_PKG+=$'\n'" =${trash}"
+				ALREADY_FORCED+="${trash}"$'\n'
+			fi
+			pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/${force}/CONTENTS" | awk '{print $2}')"
+			pkg_ver="$(grep "^${force} " <<< "${PACKAGES}" | awk '{print $2}')"
+			if ! grep -q "^${pkg_src}$" <<< "${ALREADY_FORCED}";then
+				echo -e "${green}Forcing directory:${restore}\t${pkg_src}"
+				REMOVE_DIRS+=$'\n'"${pkg_src}"
+				ALREADY_FORCED+="${pkg_src}"$'\n'
+			fi
+			version_force "${pkg_ver}"
+		elif grep -q "^sys-kernel/${force} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/sys-kernel/${force}" ]];then
+			if ! grep -q "^sys-kernel/${force}$" <<< "${ALREADY_FORCED}";then
+				echo -e "${green}Forcing package:${restore}\tsys-kernel/${force}"
+				ORPHAN_PKG+=$'\n'" =sys-kernel/${force}"
+				ALREADY_FORCED+="sys-kernel/${force}"$'\n'
+			fi
+			pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/sys-kernel/${force}/CONTENTS" | awk '{print $2}')"
+			pkg_ver="$(grep "^sys-kernel/${force} " <<< "${PACKAGES}" | awk '{print $2}')"
+			if ! grep -q "^${pkg_src}$" <<< "${ALREADY_FORCED}";then
+				echo -e "${green}Forcing directory:${restore}\t${pkg_src}"
+				REMOVE_DIRS+=$'\n'"${pkg_src}"
+				ALREADY_FORCED+="${pkg_src}"$'\n'
+			fi
+			version_force "${pkg_ver}"
+		elif grep -q "^${force}$" <<< "${all_versions}";then
+			version_force "${force}"
 		else
-			echo -e "${red}Not found:${restore}\t${force}"
+			echo -e "\n${green}>>> ${red}${force} ${green}<<<${restore} o_O???\n"
 		fi
 	done
+	unset ALREADY_FORCED
 }
 ############################################################################
 ################ status ####################################################
@@ -501,20 +579,19 @@ status(){
 	if [[ -n "${REMOVE_FILES}" ]] || [[ -n "${REMOVE_DIRS}" ]] || [[ -n "${REMOVE_MOD_DIRS}" ]] || [[ -n "${PKG}" ]];then
 		if [[ -n "${REMOVE_FILES}" ]];then
 			echo -e "\n${green}Next files will be removed:${restore}"
-			echo -e "${REMOVE_FILES}"
+			echo -e "${REMOVE_FILES}" | sed '/^$/d' | sort -u
 			echo
 		fi
 
 		if [[ -n "${REMOVE_DIRS}" ]] || [[ -n "${REMOVE_MOD_DIRS}" ]];then
 			echo -e "\n${green}Next directories will be removed:${restore}"
-			echo -e "${REMOVE_DIRS}"
-			echo -e "${REMOVE_MOD_DIRS}"
+			echo -e "${REMOVE_DIRS}"$'\n'"${REMOVE_MOD_DIRS}" | sed '/^$/d' | sort -u
 			echo
 		fi
 
 		if [[ -n "${PKG}" ]];then
 			echo -e "\n${green}Next packages will be removed:${restore}"
-			echo "${PKG}" | tr " " $'\n'
+			echo "${PKG}" | tr " " $'\n' | sed '/^$/d' | sort -u
 			echo
 		fi
 	else
@@ -627,8 +704,8 @@ case ${1} in
 	pkg_orphans
 	check_mod;
 	check_src;
-	ignore "${*}";
-	force "${*}";
+	ignore;
+	force;
 	status;
 	exit 0;;
 --run | run | -r | r )
@@ -642,8 +719,8 @@ case ${1} in
 	pkg_orphans
 	check_mod;
 	check_src;
-	ignore "${*}";
-	force "${*}";
+	ignore;
+	force;
 	status;
 	remove;
 	exit 0;;
