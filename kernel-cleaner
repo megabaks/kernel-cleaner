@@ -472,7 +472,7 @@ ignore(){
 			if ! grep -q "^${ignor}$" <<< "${ALREADY_IGNORED}";then
 				echo -e "${green}Ignoring directory:${restore}\t${ignor}"
 				REMOVE_DIRS="${REMOVE_DIRS/"${ignor}"/}"
-				UNUSED_SOURCES="${UNUSED_SOURCES/"${trash}"/}"
+				UNUSED_SOURCES="${UNUSED_SOURCES/"${ignor}"/}"
 				REMOVE_MOD_DIRS="${REMOVE_MOD_DIRS/"${ignor}"/}"
 				ALREADY_IGNORED+="${ignor}"$'\n'
 			fi
@@ -518,22 +518,22 @@ force(){
 	for force in ${FORCE};do
 		if [[ -f "${force}" ]] ;then
 			if ! grep -q "^${force}$" <<< "${ALREADY_FORCED}";then
-				echo -e "${green}Forcing file:${restore}\t\t${trash}"
-				REMOVE_FILES+=$'\n'"${trash}"
-				ALREADY_FORCED+="${trash}"$'\n'
+				echo -e "${green}Forcing file:${restore}\t\t${force}"
+				REMOVE_FILES+=$'\n'"${force}"
+				ALREADY_FORCED+="${force}"$'\n'
 			fi
 		elif [[ -d "${force}" ]];then
 			if ! grep -q "^${force}$" <<< "${ALREADY_FORCED}";then
-				echo -e "${green}Forcing directory:${restore}\t${trash}"
-				REMOVE_DIRS+=$'\n'"${trash}"
-				REMOVE_MOD_DIRS+=$'\n'"${trash}"
-				ALREADY_FORCED+="${trash}"$'\n'
+				echo -e "${green}Forcing directory:${restore}\t${force}"
+				REMOVE_DIRS+=$'\n'"${force}"
+				REMOVE_MOD_DIRS+=$'\n'"${force}"
+				ALREADY_FORCED+="${force}"$'\n'
 			fi
 		elif grep -q "^${force} " <<< "${PACKAGES}" && [[ -d "${PKGDB}/${force}" ]];then
 			if ! grep -q "^${force}$" <<< "${ALREADY_FORCED}";then
-				echo -e "${green}Forcing package:${restore}\t${trash}"
-				ORPHAN_PKG+=$'\n'" =${trash}"
-				ALREADY_FORCED+="${trash}"$'\n'
+				echo -e "${green}Forcing package:${restore}\t${force}"
+				ORPHAN_PKG+=$'\n'" =${force}"
+				ALREADY_FORCED+="${force}"$'\n'
 			fi
 			pkg_src="$(grep -m1 "dir /usr/src/linux-.*" "${PKGDB}/${force}/CONTENTS" | awk '{print $2}')"
 			pkg_ver="$(grep "^${force} " <<< "${PACKAGES}" | awk '{print $2}')"
