@@ -59,7 +59,7 @@ init(){
 	if ls -d1 /lib/modules/* &>/dev/null;then
 		mod_dirs="$(ls -d1 --color=never /lib/modules/*)"
 		for i in ${mod_dirs};do
-			MODULES+="${i} ${i##*/}"
+			MODULES+="${i} ${i##*/}"$'\n'
 		done
 	fi
 }
