@@ -614,7 +614,7 @@ remove(){
 				Yes | YES | yes | Y | y | "" )
 					echo -e "\n${green}Removing...${restore}"
 					[[ -n "${REMOVE_FILES}" ]] && rm -f  ${REMOVE_FILES//\\n/ }
-					[[ -n "${ORPHAN_PKG}" ]] && emerge -C ${ORPHAN_PKG}
+					[[ -n "${ORPHAN_PKG//=/}" ]] && emerge -C ${ORPHAN_PKG}
 					[[ -n "${REMOVE_DIRS}" ]] && rm -r ${REMOVE_DIRS//\\n/ }
 					[[ -n "${REMOVE_MOD_DIRS}" ]] && rm -r ${REMOVE_MOD_DIRS//\\n/ }
 					eend 0 2>/dev/null
