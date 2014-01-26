@@ -39,7 +39,7 @@ init(){
 	PKGDB="/var/db/pkg"
 
 	echo "Kernels....";
-	KERNELS="$(parallel -j${threads} "file -k" ::: /boot/* | sed 'N;s/:\n//' | grep "Linux.*version" |\
+	KERNELS="$(parallel -j${threads} "file -k" ::: /boot/* 2>/dev/null | sed 'N;s/:\n//' | grep "Linux.*version" |\
 			grep -oe "/boot/.*: " -oe "version .*" | sed -e 'N;s/\n//' -e 's|:||1'| awk '{print $1,$3}')" ; eend 0 2>/dev/null
 	echo "Initrams...";
 	INITRAMS="$(parallel -j${threads} "file -F ' '" ::: /boot/* 2>/dev/null | awk '/compressed data/ {print $1,$2}')" ; eend 0 2>/dev/null
