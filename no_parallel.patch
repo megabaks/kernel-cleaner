@@ -24,4 +24,3 @@
  	CONFIGS="$(grep -H 'Linux/' /boot/* 2>/dev/null | awk '{print $1,$3}')"
  	CONFIGS="${CONFIGS//:#/}" && CONFIGS_NOLOCAL="${CONFIGS}" ; eend 0 2>/dev/null
  	while read config_file config_ver;do
-
