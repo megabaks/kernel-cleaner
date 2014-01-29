@@ -1,7 +1,7 @@
 #!/bin/bash
 # Copyright megabaks
 # Distributed under the terms of the GNU General Public License v3 or later
-MY_VERSION='devel ---> 2014-01-27'
+MY_VERSION='devel ---> 2014-01-29'
 ############################################################################
 ################ check openrc ##############################################
 [[ -f "/etc/init.d/functions.sh" ]] && . /etc/init.d/functions.sh
@@ -21,7 +21,7 @@ if grep " /boot " /etc/fstab | grep -qv \#;then
 fi
 ############################################################################
 ################ config ####################################################
-[[ -z "${CONFIG}" ]] && CONFIG="/etc/kernel-cleaner.conf"
+CONFIG="${CONFIG:-/etc/kernel-cleaner.conf}"
 [[ -f "${CONFIG}" ]] && . "${CONFIG}"
 ############################################################################
 ################ ignore/force workaround ###################################
