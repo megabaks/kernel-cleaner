@@ -1,10 +1,10 @@
 #!/bin/bash
 # Copyright megabaks
 # Distributed under the terms of the GNU General Public License v3 or later
-MY_VERSION='devel ---> 2014-01-29'
+MY_VERSION='devel ---> 2014-02-04'
 ############################################################################
-################ check openrc ##############################################
-[[ -f "/etc/init.d/functions.sh" ]] && . /etc/init.d/functions.sh
+################ portage functions #########################################
+source /usr/lib*/portage/bin/isolated-functions.sh
 ############################################################################
 ################ colors ####################################################
 green="\033[01;32m"
