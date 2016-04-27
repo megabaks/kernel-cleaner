@@ -4,7 +4,9 @@
 MY_VERSION='devel ---> 2014-02-04'
 ############################################################################
 ################ portage functions #########################################
-source /usr/lib*/portage/bin/isolated-functions.sh
+PYTHON_VERSION="python$(python --version 2>&1 | grep -oE '[0-9]\.[0-9]')"
+PORTAGE_BIN_PATH="/usr/lib/portage/$PYTHON_VERSION/"
+source ${PORTAGE_BIN_PATH}/isolated-functions.sh
 ############################################################################
 ################ colors ####################################################
 green="\033[01;32m"
